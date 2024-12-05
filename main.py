@@ -1,39 +1,51 @@
 import cv2 as cv
-from plots import show_images
+import os
+import glob
 import numpy as np
+from plots import show_images
 
-def convert_greyscale_to_red(image):
-    # Convert grayscale image to RGB format by stacking the same value across 3 channels
-    rgb_image = np.stack([image] * 3, axis=-1)
+def get_jpg_files_without_extension(directory):
+    jpg_files = glob.glob(os.path.join(directory, "*.jpg"))
+    base_names = [os.path.splitext(os.path.basename(f))[0] for f in jpg_files]
+    return base_names
 
-    # Define the lower and upper bounds for the mask
-    lower_bound = 180
-    upper_bound = 200
+def draw_rectangles_around_cars(image, edges):
+    color_image = cv.cvtColor(image, cv.COLOR_GRAY2BGR)
+    contours, _ = cv.findContours(edges, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        if 500 < cv.contourArea(contour) < 5000:
+            x, y, w, h = cv.boundingRect(contour)
+            cv.rectangle(color_image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            
+    return color_image
+
+
+def save_test_images(image, name, suffix):
+    cv.imwrite(f"test/{name}-{suffix}.jpg", image)
+
+def find_parking_slots(image_name):
+    image = cv.imread(media_directory + image_name + '.jpg', cv.IMREAD_GRAYSCALE)
+    save_test_images(image, image_name, 'test')
     
-    # Create the mask using cv.inRange
-    mask = cv.inRange(image, lower_bound, upper_bound)
+    blurred = cv.medianBlur(image, 1)
+    save_test_images(blurred, image_name, 'blurred')
 
-    # Set the pixels in the mask to red ([255, 0, 0])
-    rgb_image[mask] = [255, 0, 0]
+    dilated = cv.dilate(blurred,np.ones((3,3)))
+    save_test_images(dilated, image_name, 'dilated')
 
-    return rgb_image
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (2, 2))
+    closing = cv.morphologyEx(dilated, cv.MORPH_CLOSE, kernel)
+    
+    edges = cv.Canny(closing, threshold1=50, threshold2=150)
+    save_test_images(edges, image_name, 'edges')
 
-
+    rectangles = draw_rectangles_around_cars(image, edges)
+    save_test_images(rectangles, image_name, 'rectangles')
 
 media_directory = 'Media/'
-test_directory = 'Test/'
-test_image = cv.imread(media_directory + '20241116_151424.jpg', cv.IMREAD_GRAYSCALE)
 
-cv.imwrite(test_directory + 'test.jpg', test_image)
+jpg_files = ['1', '2', '3', '4', '5', '6', '7']
 
-# modified_image = unify_vertical_line_colors(test_image, threshold=50, max_length=6)
-# show_images([test_image, modified_image])
-# cv.imwrite(test_directory + 'modified.jpg', modified_image)
-
-filtered_image = cv.medianBlur(test_image, ksize=9)
-show_images([test_image, filtered_image])
-cv.imwrite(test_directory + 'filtered.jpg', filtered_image)
-
-red_image = convert_greyscale_to_red(filtered_image)
-show_images([filtered_image, red_image])
-cv.imwrite(test_directory + 'red.jpg', red_image)
+for image_name in jpg_files:
+    find_parking_slots(image_name)
