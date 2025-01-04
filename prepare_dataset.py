@@ -3,6 +3,9 @@ import shutil
 from pathlib import Path
 
 base_dir = "datasets"
+
+shutil.rmtree(base_dir)
+
 sub_dirs = [
     "train/images",
     "train/labels",
