@@ -2,7 +2,7 @@ import os
 import shutil
 from pathlib import Path
 
-base_dir = "dataset"
+base_dir = "datasets"
 sub_dirs = [
     "train/images",
     "train/labels",
