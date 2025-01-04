@@ -1,7 +1,7 @@
-train: ./train/images
-val: ./valid/images
+train: train/images
+val: valid/images
 
 nc: 2
 names:
-  0: free
-  1: occupied
+  1: free
+  2: occupied
