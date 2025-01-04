@@ -1,6 +1,11 @@
 import json
 import os
 
+def clear_txt_files(output_folder):
+    for file in os.listdir(output_folder):
+        if file.endswith(".txt"):
+            os.remove(os.path.join(output_folder, file))
+
 def convert_annotations_to_yolo(json_file, output_folder):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -41,6 +46,7 @@ def convert_annotations_to_yolo(json_file, output_folder):
         yolo_line = f"{yolo_category_id} {x_center} {y_center} {norm_width} {norm_height}\n"
 
         output_file = os.path.join(output_folder, os.path.splitext(file_name)[0] + ".txt")
+        
         with open(output_file, 'a') as f:
             f.write(yolo_line)
 
@@ -49,6 +55,7 @@ def convert_annotations_to_yolo(json_file, output_folder):
 def to_yolo(category):
     json_file = f"PKLot/{category}/_annotations.coco.json"  # Replace with the path to your JSON file
     output_folder = f"PKLot/{category}/"  # Replace with the desired output folder
+    clear_txt_files(output_folder)
     convert_annotations_to_yolo(json_file, output_folder)
 
 to_yolo("train")
