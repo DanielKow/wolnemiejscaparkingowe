@@ -9,13 +9,21 @@ def convert_annotations_to_yolo(json_file, output_folder):
     with open(json_file, 'r') as f:
         data = json.load(f)
 
-    # Iterate through the annotations
+    category_mapping = {
+        1: 0,  # Free parking slots → YOLO class 0
+        2: 1,  # Occupied parking slots → YOLO class 1
+        0: -1  # Group category in coco → Log
+    }
+
     for annotation in data.get('annotations', []):
         image_id = annotation['image_id']
         bbox = annotation['bbox']
         category_id = annotation['category_id']
 
-        # Find the corresponding image details
+        yolo_category_id = category_mapping.get(category_id, -1)
+        if yolo_category_id == -1:
+            print(f"Category_id 0 for image_id {image_id}")
+
         image_info = next((img for img in data['images'] if img['id'] == image_id), None)
         if not image_info:
             continue
@@ -30,7 +38,7 @@ def convert_annotations_to_yolo(json_file, output_folder):
         norm_width = width / img_width
         norm_height = height / img_height
 
-        yolo_line = f"{category_id} {x_center} {y_center} {norm_width} {norm_height}\n"
+        yolo_line = f"{yolo_category_id} {x_center} {y_center} {norm_width} {norm_height}\n"
 
         output_file = os.path.join(output_folder, os.path.splitext(file_name)[0] + ".txt")
         with open(output_file, 'a') as f:

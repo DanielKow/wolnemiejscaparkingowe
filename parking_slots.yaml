@@ -3,5 +3,5 @@ val: valid/images
 
 nc: 2
 names:
-  1: free
-  2: occupied
+  0: free
+  1: occupied
