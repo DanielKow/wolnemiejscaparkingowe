@@ -27,6 +27,14 @@ class ResultsSaver:
         print(f"Saved: {filepath}")
         self.images_and_titles.append((image, title))
 
+    def save_plot(self, plot, title):
+        """
+        Saves the given plot to the specified run directory.
+        """
+        filepath = os.path.join(self.run_dir, title + ".jpg")
+        plot.savefig(filepath)
+        print(f"Saved: {filepath}")
+
     def display_images(self):
         """Displays all saved images dynamically."""
     
@@ -34,6 +42,7 @@ class ResultsSaver:
         cols = 4  # Number of columns (can be adjusted)
         rows = (num_images + cols - 1) // cols  # Calculate rows dynamically
     
+        plt.close()
         plt.figure(figsize=(15, 5 * rows))
         for i, (image, title) in enumerate(self.images_and_titles):
             plt.subplot(rows, cols, i + 1)

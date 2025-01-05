@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from sklearn.linear_model import RANSACRegressor
+import matplotlib.pyplot as plt
 
 from saving_results import ResultsSaver
 
@@ -194,14 +195,29 @@ class ImageProcessor:
         self._save("ransac_detected_lines")
         return self
 
+    def draw_histogram(self):
+        """Draws a histogram of pixel intensities and saves the step."""
+        hist = cv2.calcHist([self.result], [0], None, [256], [0, 256])
+        plt.figure(figsize=(10, 5))
+        plt.title("Grayscale Histogram")
+        plt.xlabel("Bins")
+        plt.ylabel("# of Pixels")
+        plt.plot(hist)
+        plt.xlim([0, 256])
+        plt.show()
+        self.saver.save_plot(plt, "histogram")
+        return self
+
     def display_results(self):
         """Displays all saved images."""
         self.saver.display_images()
 
 
-processor = ImageProcessor('test_images/2012-09-12_06_36_36_jpg.rf.08869047c7e9f62f5ce9334546b52958.jpg')
+processor = ImageProcessor('test_images/1.jpg')
 
-processor.convert_to_grayscale() \
+processor \
+    .convert_to_grayscale() \
+    .draw_histogram() \
     .apply_clahe() \
     .apply_bilateral_filter_bottom(d=9, sigma_color=100, sigma_space=100) \
     .detect_edges() \
