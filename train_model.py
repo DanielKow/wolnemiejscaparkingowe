@@ -6,5 +6,6 @@ model.train(
     epochs=50,
     imgsz=640,
     device="mps",
-    conf=0.4
+    optimizer="Adam",
+    lr0=0.00025
 )
