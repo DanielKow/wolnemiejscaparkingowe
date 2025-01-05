@@ -205,6 +205,7 @@ class ImageProcessor:
         plt.plot(hist)
         plt.xlim([0, 256])
         plt.show()
+        plt.close()
         self.saver.save_plot(plt, "histogram")
         return self
 
@@ -213,12 +214,13 @@ class ImageProcessor:
         self.saver.display_images()
 
 
-processor = ImageProcessor('test_images/1.jpg')
+processor = ImageProcessor('test_images/2.jpg')
 
 processor \
     .convert_to_grayscale() \
     .draw_histogram() \
     .apply_clahe() \
+    .draw_histogram() \
     .apply_bilateral_filter_bottom(d=9, sigma_color=100, sigma_space=100) \
     .detect_edges() \
     .refine_edges() \

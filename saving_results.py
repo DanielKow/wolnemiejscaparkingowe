@@ -42,7 +42,6 @@ class ResultsSaver:
         cols = 4  # Number of columns (can be adjusted)
         rows = (num_images + cols - 1) // cols  # Calculate rows dynamically
     
-        plt.close()
         plt.figure(figsize=(15, 5 * rows))
         for i, (image, title) in enumerate(self.images_and_titles):
             plt.subplot(rows, cols, i + 1)
