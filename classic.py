@@ -151,7 +151,7 @@ class ImageProcessor:
         vertical_lines_image = self.image.copy()
         for line in verified_lines:
             x1, y1, x2, y2 = map(int, line[0])
-            cv2.line(vertical_lines_image, (x1, y1), (x2, y2), (0, 255, 255), 1)
+            cv2.line(vertical_lines_image, (x1, y1), (x2, y2), (0, 0, 255), 1)
     
         # Display the result
         self.result = vertical_lines_image
