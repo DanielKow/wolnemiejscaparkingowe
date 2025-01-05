@@ -99,18 +99,7 @@ class ImageProcessor:
 
         # Detect lines
         lines = lsd.detect(self.result)[0]
-
-        vertical_lines = []
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            if abs(x2 - x1) < 5:  # Vertical line threshold (small horizontal difference)
-                vertical_lines.append((int(round(x1)), int(round(y1)), int(round(x2)), int(round(y2))))
-
-        # Draw the detected lines
-        drawn_lines = self.image.copy()
-        for line in vertical_lines:
-            x1, y1, x2, y2 = line
-            cv2.line(drawn_lines, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        drawn_lines = lsd.drawSegments(self.image, lines)
         
         # Display the result
         self.result = drawn_lines
