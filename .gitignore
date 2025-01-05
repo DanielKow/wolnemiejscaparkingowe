@@ -162,6 +162,10 @@ cython_debug/
 .idea/
 .DS_Store
 
+# classic
+test_images/
+results/
+
 # yolo
 
 PKLot/
