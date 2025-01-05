@@ -55,6 +55,12 @@ class ImageProcessor:
         self._save("clahe_enhanced")
         return self
 
+    def apply_blur(self, kernel_size=(5, 5)):
+        """Applies Gaussian blur and saves the step."""
+        self.result = cv2.GaussianBlur(self.result, kernel_size, 0)
+        self._save("blurred")
+        return self
+
     def detect_edges(self, threshold1=50, threshold2=150):
         """Performs edge detection using the Canny algorithm and saves the step."""
         self.result = cv2.Canny(self.result, threshold1, threshold2)
@@ -96,6 +102,7 @@ if __name__ == "__main__":
     processor.convert_to_grayscale() \
         .apply_kmeans_to_bottom(mask_ratio=0.3, k=5) \
         .apply_clahe() \
+        .apply_blur() \
         .detect_edges() \
         .refine_edges() \
         .detect_lines() \
