@@ -1,64 +1,64 @@
 import cv2
 import numpy as np
-from PIL import ImageEnhance
-
-from sklearn.cluster import KMeans
 from saving_results import ResultsSaver
 
-# Initialize the results saver
-results_saver = ResultsSaver()
+# Initialize ResultsSaver
+saver = ResultsSaver()
 
-
-# Load the original image
+# Load the image
 image_path = 'test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg'
 image = cv2.imread(image_path)
+saver.save(image, "original_image")
 
+# Convert to grayscale
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+saver.save(gray, "grayscale_image")
 
-# Reshape the image to 2D for k-means clustering
-pixels = image.reshape((-1, 3))
-pixels = np.float32(pixels)
+# Apply Gaussian blur to reduce noise
+blur = cv2.GaussianBlur(gray, (5, 5), 0)
+saver.save(blur, "blurred_image")
 
-# Apply K-means clustering
-num_clusters = 32  # Adjust based on the number of color groups in your image
-kmeans = KMeans(n_clusters=num_clusters, random_state=0, n_init=10)
-labels = kmeans.fit_predict(pixels)
-cluster_centers = kmeans.cluster_centers_.astype("uint8")
+# Perform edge detection
+edges = cv2.Canny(blur, 50, 150)
+saver.save(edges, "edges_detected")
 
-# Create the clustered image
-segmented_image = cluster_centers[labels].reshape(image.shape)
-
-# Save the clustered image
-results_saver.save(segmented_image, "clustered_image")
-
-# Convert the clustered image to grayscale
-gray = cv2.cvtColor(segmented_image, cv2.COLOR_BGR2GRAY)
-
-# Apply thresholding to isolate potential lines
-_, thresholded = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-
-# Save the thresholded image
-results_saver.save(thresholded, "thresholded")
-
-# Edge detection
-edges = cv2.Canny(thresholded, 50, 150, apertureSize=3)
-
-# Save the edge-detected image
-results_saver.save(edges, "edges")
-
-# Detect lines using Hough Transform
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=100, maxLineGap=20)
-
-# Draw the detected lines on the original image
+# Use Hough Line Transform to detect lines
+lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=10)
 line_image = np.copy(image)
+
 if lines is not None:
     for line in lines:
         x1, y1, x2, y2 = line[0]
-        # Filter lines that are approximately parallel
-        angle = abs(np.arctan2(y2 - y1, x2 - x1) * 180.0 / np.pi)
-        if 85 <= angle <= 95 or -5 <= angle <= 5:  # Near-vertical or near-horizontal
-            cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-# Save the final result image
-results_saver.save(line_image, "detected_lines")
+saver.save(line_image, "lines_detected")
 
-results_saver.display_images()
+# Highlight parking slots using pairs of parallel lines
+parking_lines = np.copy(image)
+
+if lines is not None:
+    # Analyze parallel lines based on their slope and position
+    slopes = []
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        if x2 - x1 != 0:  # Avoid division by zero
+            slope = (y2 - y1) / (x2 - x1)
+            slopes.append((slope, line[0]))
+
+    # Sort lines by slope and group close parallel lines
+    slopes.sort(key=lambda x: x[0])  # Sort by slope
+    for i in range(len(slopes) - 1):
+        slope1, line1 = slopes[i]
+        slope2, line2 = slopes[i + 1]
+        # Check if lines are parallel (similar slopes)
+        if abs(slope1 - slope2) < 0.1:
+            # Draw parallel lines
+            x1, y1, x2, y2 = line1
+            cv2.line(parking_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            x1, y1, x2, y2 = line2
+            cv2.line(parking_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+saver.save(parking_lines, "parking_slots_detected")
+
+# Display the results
+saver.display_images()
