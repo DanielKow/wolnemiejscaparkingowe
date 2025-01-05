@@ -22,6 +22,11 @@ class ResultsSaver:
         Saves the given image to the specified run directory.
         """
         filepath = os.path.join(self.run_dir, title + ".jpg")
+        
+        if image is None:
+            print(f"Image is None: {title}")
+            return
+        
         cv2.imwrite(filepath, image)
         print(f"Saved: {filepath}")
         self.images_and_titles.append((image, title))
