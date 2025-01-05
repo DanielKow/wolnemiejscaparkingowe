@@ -15,58 +15,27 @@ if image is None:
 
 saver.save(image, "original_image")
 
-# Convert to HSV for color thresholding
-hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-saver.save(hsv, "hsv_image")
-
-# Threshold for bright colors (white parking lines)
-lower_white = np.array([0, 0, 200])
-upper_white = np.array([180, 50, 255])
-mask_white = cv2.inRange(hsv, lower_white, upper_white)
-saver.save(mask_white, "white_color_mask")
-
-# Smooth the mask to reduce noise
-smoothed_mask = cv2.medianBlur(mask_white, 5)
-saver.save(smoothed_mask, "smoothed_white_mask")
-
 # Convert to grayscale
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 saver.save(gray, "grayscale_image")
 
-# Adaptive histogram equalization
+# Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 enhanced_gray = clahe.apply(gray)
 saver.save(enhanced_gray, "enhanced_grayscale")
 
-# Adaptive edge detection (Sobel + Canny)
-edges_sobel_x = cv2.Sobel(enhanced_gray, cv2.CV_64F, 1, 0, ksize=3)  # Sobel in X direction
-edges_sobel_x = np.uint8(np.absolute(edges_sobel_x))
-saver.save(edges_sobel_x, "sobel_edges_x")
+# Perform edge detection using Canny with optimized thresholds
+edges = cv2.Canny(enhanced_gray, 50, 150)  # Fine-tuned thresholds
+saver.save(edges, "edges_detected")
 
-edges_sobel_y = cv2.Sobel(enhanced_gray, cv2.CV_64F, 0, 1, ksize=3)  # Sobel in Y direction
-edges_sobel_y = np.uint8(np.absolute(edges_sobel_y))
-saver.save(edges_sobel_y, "sobel_edges_y")
-
-# Combine Sobel X and Y
-edges_sobel = cv2.bitwise_or(edges_sobel_x, edges_sobel_y)
-saver.save(edges_sobel, "combined_sobel_edges")
-
-# Canny edge detection (less strict thresholds)
-edges_canny = cv2.Canny(enhanced_gray, 50, 120)
-saver.save(edges_canny, "canny_edges")
-
-# Combine edges (Sobel + Canny) with color mask
-combined_edges = cv2.bitwise_or(edges_sobel, edges_canny)
-combined = cv2.bitwise_or(smoothed_mask, combined_edges)
-saver.save(combined, "combined_mask")
-
-# Use morphological operations to enhance combined result
+# Use morphological operations to enhance the edges
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-dilated = cv2.dilate(combined, kernel, iterations=1)
-saver.save(dilated, "dilated_combined")
+dilated = cv2.dilate(edges, kernel, iterations=1)
+eroded = cv2.erode(dilated, kernel, iterations=1)  # Optional: Refine edges by erosion
+saver.save(eroded, "refined_edges")
 
 # Detect lines using Hough Line Transform
-lines = cv2.HoughLinesP(dilated, 1, np.pi / 180, threshold=100, minLineLength=80, maxLineGap=20)
+lines = cv2.HoughLinesP(eroded, 1, np.pi / 180, threshold=100, minLineLength=80, maxLineGap=20)
 
 line_image = np.copy(image)
 
