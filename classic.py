@@ -18,12 +18,12 @@ saver.save(gray, "grayscale_image")
 blur = cv2.GaussianBlur(gray, (5, 5), 0)
 saver.save(blur, "blurred_image")
 
-# Perform edge detection
-edges = cv2.Canny(blur, 50, 150)
+# Perform edge detection with adjusted thresholds
+edges = cv2.Canny(blur, 30, 100)  # Adjusted thresholds for better edge detection
 saver.save(edges, "edges_detected")
 
-# Use Hough Line Transform to detect lines
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=10)
+# Use Hough Line Transform to detect lines with stricter criteria
+lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=80, minLineLength=100, maxLineGap=20)
 line_image = np.copy(image)
 
 if lines is not None:
@@ -33,11 +33,10 @@ if lines is not None:
 
 saver.save(line_image, "lines_detected")
 
-# Highlight parking slots using pairs of parallel lines
+# Additional step: Highlight parallel lines and refine parking line detection
 parking_lines = np.copy(image)
 
 if lines is not None:
-    # Analyze parallel lines based on their slope and position
     slopes = []
     for line in lines:
         x1, y1, x2, y2 = line[0]
@@ -45,20 +44,19 @@ if lines is not None:
             slope = (y2 - y1) / (x2 - x1)
             slopes.append((slope, line[0]))
 
-    # Sort lines by slope and group close parallel lines
-    slopes.sort(key=lambda x: x[0])  # Sort by slope
+    # Sort lines by slope and identify potential parking slots
+    slopes.sort(key=lambda x: x[0])
     for i in range(len(slopes) - 1):
         slope1, line1 = slopes[i]
         slope2, line2 = slopes[i + 1]
-        # Check if lines are parallel (similar slopes)
-        if abs(slope1 - slope2) < 0.1:
+        if abs(slope1 - slope2) < 0.05:  # Parallel slope threshold
             # Draw parallel lines
             x1, y1, x2, y2 = line1
             cv2.line(parking_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
             x1, y1, x2, y2 = line2
             cv2.line(parking_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-saver.save(parking_lines, "parking_slots_detected")
+saver.save(parking_lines, "parking_lines_refined")
 
 # Display the results
 saver.display_images()
