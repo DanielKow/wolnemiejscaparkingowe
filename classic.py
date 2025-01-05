@@ -26,6 +26,23 @@ class ImageProcessor:
         self._save("grayscale_image")
         return self
 
+    def apply_bilateral_filter_bottom(self, d=9, sigma_color=75, sigma_space=75, mask_ratio=0.3):
+        """Applies bilateral filtering only to the bottom portion of the image."""
+        # Get the image dimensions
+        height, width = self.result.shape[:2]
+    
+        # Define the region of interest (bottom 30% of the image)
+        start_row = int(height * (1 - mask_ratio))
+        roi = self.result[start_row:, :]
+    
+        # Apply bilateral filter to the bottom portion
+        filtered_roi = cv2.bilateralFilter(roi, d, sigma_color, sigma_space)
+    
+        # Replace the bottom part of the original image with the filtered result
+        self.result[start_row:, :] = filtered_roi
+        self._save("bilateral_filter_bottom")
+        return self
+
     def apply_kmeans_to_bottom(self, mask_ratio=0.3, k=5):
         """Applies K-means clustering to the bottom portion of the image and saves the step."""
         height, width = self.result.shape[:2]
@@ -60,10 +77,28 @@ class ImageProcessor:
         self._save("clahe_enhanced")
         return self
 
-    def apply_blur(self, kernel_size=(3, 3)):
+    def apply_gaussian_blur(self, kernel_size=(3, 3)):
         """Applies Gaussian blur and saves the step."""
         self.result = cv2.GaussianBlur(self.result, kernel_size, 0)
         self._save("blurred")
+        return self
+    
+    
+    def apply_gaussian_blur_bottom(self, kernel_size=(3, 3), mask_ratio=0.3):
+        """Applies Gaussian blur only to the bottom portion of the image."""
+        # Get the image dimensions
+        height, width = self.result.shape[:2]
+    
+        # Define the region of interest (bottom 30% of the image)
+        start_row = int(height * (1 - mask_ratio))
+        roi = self.result[start_row:, :]
+    
+        # Apply Gaussian blur to the bottom portion
+        blurred_roi = cv2.GaussianBlur(roi, kernel_size, 0)
+    
+        # Replace the bottom part of the original image with the blurred result
+        self.result[start_row:, :] = blurred_roi
+        self._save("blurred_bottom")
         return self
 
     def detect_edges(self, threshold1=50, threshold2=150):
@@ -167,9 +202,8 @@ class ImageProcessor:
 processor = ImageProcessor('test_images/2012-09-12_06_36_36_jpg.rf.08869047c7e9f62f5ce9334546b52958.jpg')
 
 processor.convert_to_grayscale() \
-    .apply_kmeans_to_bottom() \
     .apply_clahe() \
-    .apply_blur() \
+    .apply_bilateral_filter_bottom(d=9, sigma_color=100, sigma_space=100) \
     .detect_edges() \
     .refine_edges() \
     .detect_lines_lsd() \
