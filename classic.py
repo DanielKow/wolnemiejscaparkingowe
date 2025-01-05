@@ -94,6 +94,7 @@ if __name__ == "__main__":
     processor = ImageProcessor('test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg')
 
     processor.convert_to_grayscale() \
+        .apply_kmeans_to_bottom(mask_ratio=0.3, k=5) \
         .apply_clahe() \
         .detect_edges() \
         .refine_edges() \
