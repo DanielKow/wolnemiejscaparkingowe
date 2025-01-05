@@ -28,12 +28,15 @@ class ResultsSaver:
         self.images_and_titles.append((image, title))
 
     def display_images(self):
-        """
-        Displays multiple images using matplotlib.pyplot.
-        """
-        plt.figure(figsize=(15, 10))
+        """Displays all saved images dynamically."""
+    
+        num_images = len(self.images_and_titles)  # Total number of images
+        cols = 4  # Number of columns (can be adjusted)
+        rows = (num_images + cols - 1) // cols  # Calculate rows dynamically
+    
+        plt.figure(figsize=(15, 5 * rows))
         for i, (image, title) in enumerate(self.images_and_titles):
-            plt.subplot(2, 4, i + 1)
+            plt.subplot(rows, cols, i + 1)
             if len(image.shape) == 2:  # Grayscale
                 plt.imshow(image, cmap='gray')
             else:  # Color

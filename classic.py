@@ -14,9 +14,11 @@ class ImageProcessor:
         self.saver = ResultsSaver()
         self._save("original_image")
 
-    def _save(self, step_name):
+    def _save(self, step_name, image=None):
         """Internal method to save the current state of the image."""
-        self.saver.save(self.result, step_name)
+        if image is None:
+            image = self.result
+        self.saver.save(image, step_name)
 
     def convert_to_grayscale(self):
         """Converts the current image to grayscale and saves the step."""
@@ -99,12 +101,13 @@ class ImageProcessor:
 
         # Detect lines
         lines = lsd.detect(self.result)[0]
-        drawn_lines = lsd.drawSegments(self.image, lines)
+        if lines is None:
+            print("No lines detected.")
+            return self
+        drawn_lines = lsd.drawSegments(self.image.copy(), lines)
         
         # Display the result
-        self.result = drawn_lines
-        self._save("detected_parking_slots")
-        
+        self._save("detected_parking_slots", drawn_lines)
         return self
 
     def detect_lines_ransac(self):
