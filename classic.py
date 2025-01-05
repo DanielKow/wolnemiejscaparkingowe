@@ -50,29 +50,36 @@ image = cv2.imread(image_path)
 # Convert to grayscale
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+# Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+enhanced = clahe.apply(gray)
+
+# Save the enhanced image
+save_image_to_run_dir(enhanced, "enhanced_contrast.jpg", run_dir)
+
 # Apply Gaussian blur to reduce noise slightly
-blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+blurred = cv2.GaussianBlur(enhanced, (5, 5), 0)
 
 # Save the blurred image
 save_image_to_run_dir(blurred, "blurred.jpg", run_dir)
 
 # Apply adaptive thresholding with tuned parameters
 adaptive_thresh = cv2.adaptiveThreshold(
-    blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 4
+    blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 4
 )
 
 # Save the adaptive threshold image
 save_image_to_run_dir(adaptive_thresh, "adaptive_thresh_tuned.jpg", run_dir)
 
-# OPTIONAL: Morphological operations (with a smaller kernel)
-kernel = np.ones((2, 2), np.uint8)  # Very small kernel
-morph_cleaned = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_CLOSE, kernel)
+# Dilate the thresholded image to emphasize lines
+kernel = np.ones((3, 3), np.uint8)
+dilated = cv2.dilate(adaptive_thresh, kernel, iterations=1)
 
-# Save the morphologically cleaned image
-save_image_to_run_dir(morph_cleaned, "adaptive_thresh_morph_cleaned.jpg", run_dir)
+# Save the dilated image
+save_image_to_run_dir(dilated, "dilated.jpg", run_dir)
 
 # Edge detection
-edges = cv2.Canny(morph_cleaned, 50, 150, apertureSize=3)
+edges = cv2.Canny(dilated, 50, 150, apertureSize=3)
 
 # Save the edge-detected image
 save_image_to_run_dir(edges, "edges.jpg", run_dir)
@@ -94,10 +101,10 @@ save_image_to_run_dir(line_image, "detected_lines.jpg", run_dir)
 
 # Display results
 images_to_display = [
-    gray, blurred, adaptive_thresh, morph_cleaned, edges, line_image
+    gray, enhanced, adaptive_thresh, dilated, edges, line_image
 ]
 titles = [
-    "Grayscale", "Blurred", "Adaptive Threshold (Tuned)", "Morph Cleaned", "Edges", "Detected Lines"
+    "Grayscale", "Enhanced Contrast", "Adaptive Threshold", "Dilated", "Edges", "Detected Lines"
 ]
 
 display_images(images_to_display, titles)
