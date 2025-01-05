@@ -15,9 +15,23 @@ if image is None:
 
 saver.save(image, "original_image")
 
-# Apply Gaussian Blur to reduce noise
-blurred_image = cv2.GaussianBlur(image, (5, 5), 0)  # Kernel size (5, 5)
-saver.save(blurred_image, "blurred_image")
+# Create a mask to define areas for stronger blur (e.g., bottom of the image)
+height, width, _ = image.shape
+mask = np.zeros((height, width), dtype=np.uint8)
+
+# Define the region for stronger blur (e.g., bottom 30% of the image)
+cv2.rectangle(mask, (0, int(height * 0.7)), (width, height), 255, -1)  # White rectangle for bottom
+saver.save(mask, "blur_mask")
+
+# Apply different levels of blur
+light_blur = cv2.GaussianBlur(image, (5, 5), 0)  # Light blur for the whole image
+strong_blur = cv2.GaussianBlur(image, (15, 15), 0)  # Strong blur for noisy regions
+
+# Combine the two blurred versions using the mask
+blurred_image = cv2.bitwise_and(strong_blur, strong_blur, mask=mask) + \
+                cv2.bitwise_and(light_blur, light_blur, mask=cv2.bitwise_not(mask))
+
+saver.save(blurred_image, "selectively_blurred_image")
 
 # Convert to grayscale
 gray = cv2.cvtColor(blurred_image, cv2.COLOR_BGR2GRAY)
@@ -29,7 +43,7 @@ enhanced_gray = clahe.apply(gray)
 saver.save(enhanced_gray, "enhanced_grayscale")
 
 # Perform edge detection using Canny with optimized thresholds
-edges = cv2.Canny(enhanced_gray, 50, 150)  # Fine-tuned thresholds
+edges = cv2.Canny(enhanced_gray, 50, 150)
 saver.save(edges, "edges_detected")
 
 # Use morphological operations to enhance the edges
