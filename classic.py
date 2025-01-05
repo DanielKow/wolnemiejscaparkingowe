@@ -55,8 +55,14 @@ saver.save(enhanced_gray, "enhanced_grayscale")
 edges = cv2.Canny(enhanced_gray, 50, 150)
 saver.save(edges, "edges_detected")
 
+# Use morphological operations to enhance the edges
+kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+dilated = cv2.dilate(edges, kernel, iterations=1)
+eroded = cv2.erode(dilated, kernel, iterations=1)  # Optional: Refine edges by erosion
+saver.save(eroded, "refined_edges")
+
 # Detect lines using Hough Line Transform
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=80, maxLineGap=20)
+lines = cv2.HoughLinesP(eroded, 1, np.pi / 180, threshold=100, minLineLength=80, maxLineGap=20)
 
 line_image = np.copy(image)
 
