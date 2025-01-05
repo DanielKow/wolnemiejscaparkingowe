@@ -12,14 +12,15 @@ def check_image_sizes(directory, target_size):
     mismatched_images = []
 
     for filename in os.listdir(directory):
-        if filename.endswith('.jpg'):
-            filepath = os.path.join(directory, filename)
-            try:
-                with Image.open(filepath) as img:
-                    if img.size != target_size:
-                        mismatched_images.append((filename, img.size))
-            except Exception as e:
-                print(f"Problem z odczytem pliku '{filename}': {e}")
+        if not filename.endswith('.jpg'):
+            continue
+        filepath = os.path.join(directory, filename)
+        try:
+            with Image.open(filepath) as img:
+                if img.size != target_size:
+                    mismatched_images.append((filename, img.size))
+        except Exception as e:
+            print(f"Problem z odczytem pliku '{filename}': {e}")
 
     return mismatched_images
 
@@ -40,4 +41,4 @@ if train_mismatches or valid_mismatches:
         for filename, size in valid_mismatches:
             print(f"  {filename}: {size}")
 else:
-    print("Wszystkie obrazy mają rozmiar 640x640.")
+    print("Wszystkie obrazy mają rozmiar 640x640 :)")
