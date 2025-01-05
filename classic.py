@@ -23,42 +23,42 @@ edges = cv2.Canny(blur, 50, 150)
 saver.save(edges, "edges_detected")
 
 # Detect lines using Hough Line Transform
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=80, minLineLength=100, maxLineGap=50)
+lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=80, minLineLength=100, maxLineGap=20)
 
 line_image = np.copy(image)
 
-# Filter horizontal lines
+# Filter vertical lines
 if lines is not None:
-    horizontal_lines = []
+    vertical_lines = []
     for line in lines:
         x1, y1, x2, y2 = line[0]
         # Calculate the slope
         if x2 - x1 != 0:  # Avoid division by zero
-            slope = (y2 - y1) / (x2 - x1)
-            if abs(slope) < 0.1:  # Keep lines that are almost horizontal
-                horizontal_lines.append((x1, y1, x2, y2))
+            slope = abs((y2 - y1) / (x2 - x1))
+            if slope > 5:  # Keep lines that are almost vertical
+                vertical_lines.append((x1, y1, x2, y2))
                 cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-saver.save(line_image, "horizontal_lines_detected")
+saver.save(line_image, "vertical_lines_detected")
 
-# Cluster lines into rows (based on y-coordinates)
+# Cluster lines into groups (based on x-coordinates)
 clustered_lines = np.copy(image)
-if horizontal_lines:
-    rows = {}
-    for line in horizontal_lines:
+if vertical_lines:
+    columns = {}
+    for line in vertical_lines:
         x1, y1, x2, y2 = line
-        row_key = y1 // 20  # Cluster lines based on their approximate vertical position
-        if row_key not in rows:
-            rows[row_key] = []
-        rows[row_key].append(line)
+        col_key = x1 // 20  # Cluster lines based on their approximate horizontal position
+        if col_key not in columns:
+            columns[col_key] = []
+        columns[col_key].append(line)
 
     # Draw the clustered lines
-    for row_key, lines in rows.items():
+    for col_key, lines in columns.items():
         for line in lines:
             x1, y1, x2, y2 = line
             cv2.line(clustered_lines, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-saver.save(clustered_lines, "clustered_lines")
+saver.save(clustered_lines, "clustered_vertical_lines")
 
 # Display the results
 saver.display_images()
