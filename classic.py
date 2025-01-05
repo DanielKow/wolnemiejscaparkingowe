@@ -11,54 +11,42 @@ image_path = 'test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2
 # Load the image
 image = cv2.imread(image_path)
 if image is None:
-    raise ValueError("Nie można załadować obrazu. Sprawdź poprawność ścieżki.")
+    raise ValueError("Cannot load the image. Check the file path.")
 
 saver.save(image, "original_image")
 
-# Create a mask for the bottom region
-height, width, _ = image.shape
-mask = np.zeros((height, width), dtype=np.uint8)
-cv2.rectangle(mask, (0, int(height * 0.7)), (width, height), 255, -1)  # Bottom 30%
+# Convert the entire image to grayscale
+gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+saver.save(gray_image, "grayscale_image")
 
-# Extract the bottom region for K-means clustering
-bottom_region = cv2.bitwise_and(image, image, mask=mask)
-
-# Reshape the bottom region for K-means clustering
-pixel_values = bottom_region.reshape((-1, 3))
+# Reshape the grayscale image for K-means clustering
+pixel_values = gray_image.reshape((-1, 1))
 pixel_values = np.float32(pixel_values)  # Convert to float32 for K-means
 
 # Apply K-means clustering
-k = 4  # Number of clusters
+k = 5  # Number of clusters
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
 _, labels, centers = cv2.kmeans(pixel_values, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
 # Map pixels to their cluster centers
 centers = np.uint8(centers)
 segmented_image = centers[labels.flatten()]
-segmented_image = segmented_image.reshape(bottom_region.shape)
+segmented_image = segmented_image.reshape(gray_image.shape)
+saver.save(segmented_image, "segmented_image")
 
-# Combine the clustered bottom region with the original top region
-top_region = cv2.bitwise_and(image, image, mask=cv2.bitwise_not(mask))
-combined_image = cv2.addWeighted(top_region, 1, segmented_image, 1, 0)
-saver.save(combined_image, "kmeans_segmented_image")
-
-# Convert to grayscale
-gray = cv2.cvtColor(combined_image, cv2.COLOR_BGR2GRAY)
-saver.save(gray, "grayscale_image")
-
-# Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
+# Optional: Enhance contrast of the segmented image using CLAHE
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-enhanced_gray = clahe.apply(gray)
-saver.save(enhanced_gray, "enhanced_grayscale")
+enhanced_segmented = clahe.apply(segmented_image)
+saver.save(enhanced_segmented, "enhanced_segmented_image")
 
-# Perform edge detection using Canny with optimized thresholds
-edges = cv2.Canny(enhanced_gray, 50, 150)
+# Perform edge detection on the enhanced segmented image
+edges = cv2.Canny(enhanced_segmented, 50, 150)
 saver.save(edges, "edges_detected")
 
-# Use morphological operations to enhance the edges
+# Use morphological operations to refine edges
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
 dilated = cv2.dilate(edges, kernel, iterations=1)
-eroded = cv2.erode(dilated, kernel, iterations=1)  # Optional: Refine edges by erosion
+eroded = cv2.erode(dilated, kernel, iterations=1)
 saver.save(eroded, "refined_edges")
 
 # Detect lines using Hough Line Transform
