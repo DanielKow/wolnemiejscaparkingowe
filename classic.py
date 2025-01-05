@@ -50,43 +50,54 @@ image = cv2.imread(image_path)
 # Convert to grayscale
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-# Apply Gaussian blur to reduce noise before thresholding
+# Apply Gaussian blur to reduce noise slightly
 blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
 # Save the blurred image
 save_image_to_run_dir(blurred, "blurred.jpg", run_dir)
 
-# Apply adaptive thresholding
+# Apply adaptive thresholding with tuned parameters
 adaptive_thresh = cv2.adaptiveThreshold(
-    blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+    blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 4
 )
 
 # Save the adaptive threshold image
-save_image_to_run_dir(adaptive_thresh, "adaptive_thresh_raw.jpg", run_dir)
+save_image_to_run_dir(adaptive_thresh, "adaptive_thresh_tuned.jpg", run_dir)
 
-# Apply morphological operations to clean noise
-kernel = np.ones((3, 3), np.uint8)
-morph_cleaned = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_OPEN, kernel)
+# OPTIONAL: Morphological operations (with a smaller kernel)
+kernel = np.ones((2, 2), np.uint8)  # Very small kernel
+morph_cleaned = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_CLOSE, kernel)
 
 # Save the morphologically cleaned image
-save_image_to_run_dir(morph_cleaned, "adaptive_thresh_cleaned.jpg", run_dir)
+save_image_to_run_dir(morph_cleaned, "adaptive_thresh_morph_cleaned.jpg", run_dir)
 
-# Optional: Filter small areas using contours
-contours, _ = cv2.findContours(morph_cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-cleaned_contour = np.zeros_like(morph_cleaned)
-for contour in contours:
-    if cv2.contourArea(contour) > 50:  # Keep only contours with area > 50
-        cv2.drawContours(cleaned_contour, [contour], -1, 255, -1)
+# Edge detection
+edges = cv2.Canny(morph_cleaned, 50, 150, apertureSize=3)
 
-# Save the contour-filtered result
-save_image_to_run_dir(cleaned_contour, "adaptive_thresh_final.jpg", run_dir)
+# Save the edge-detected image
+save_image_to_run_dir(edges, "edges.jpg", run_dir)
+
+# Detect lines using Hough Transform
+lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
+
+# Draw the detected lines on the original image
+line_image = np.copy(image)
+if lines is not None:
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        # Filter lines based on their orientation (e.g., mostly horizontal or vertical)
+        if abs(y2 - y1) < 20 or abs(x2 - x1) < 20:  # Adjust this threshold as needed
+            cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+# Save the final result image
+save_image_to_run_dir(line_image, "detected_lines.jpg", run_dir)
 
 # Display results
 images_to_display = [
-    gray, blurred, adaptive_thresh, morph_cleaned, cleaned_contour
+    gray, blurred, adaptive_thresh, morph_cleaned, edges, line_image
 ]
 titles = [
-    "Grayscale", "Blurred", "Adaptive Threshold (Raw)", "Morph Cleaned", "Final Cleaned"
+    "Grayscale", "Blurred", "Adaptive Threshold (Tuned)", "Morph Cleaned", "Edges", "Detected Lines"
 ]
 
 display_images(images_to_display, titles)
