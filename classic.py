@@ -2,81 +2,95 @@ import cv2
 import numpy as np
 from saving_results import ResultsSaver
 
-# Initialize ResultsSaver
-saver = ResultsSaver()
 
-# Fixed image path
-image_path = 'test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg'
+class ImageProcessor:
+    def __init__(self, image_path):
+        self.image = cv2.imread(image_path)
+        if self.image is None:
+            raise ValueError("Cannot load the image. Check the file path.")
+        self.result = self.image.copy()  # Keeps track of the current state of the image
+        self.saver = ResultsSaver()
 
-# Load the image
-image = cv2.imread(image_path)
-if image is None:
-    raise ValueError("Cannot load the image. Check the file path.")
+    def _save(self, step_name):
+        """Internal method to save the current state of the image."""
+        self.saver.save(self.result, step_name)
 
-saver.save(image, "original_image")
+    def convert_to_grayscale(self):
+        """Converts the current image to grayscale and saves the step."""
+        self.result = cv2.cvtColor(self.result, cv2.COLOR_BGR2GRAY)
+        self._save("grayscale_image")
+        return self
 
-# Convert the entire image to grayscale
-gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-saver.save(gray_image, "grayscale_image")
+    def apply_mask(self, mask_ratio=0.3):
+        """Applies a mask to isolate the bottom part of the image and saves the step."""
+        height, width = self.result.shape[:2]
+        mask = np.zeros((height, width), dtype=np.uint8)
+        cv2.rectangle(mask, (0, int(height * (1 - mask_ratio))), (width, height), 255, -1)
+        self.result = cv2.bitwise_and(self.result, self.result, mask=mask)
+        self._save("masked_image")
+        return self
 
-# Create a mask for the bottom region
-height, width = gray_image.shape
-mask = np.zeros((height, width), dtype=np.uint8)
-cv2.rectangle(mask, (0, int(height * 0.7)), (width, height), 255, -1)  # Bottom 30%
+    def apply_kmeans(self, k=5):
+        """Applies K-means clustering to the current image and saves the step."""
+        pixel_values = self.result.reshape((-1, 1)).astype(np.float32)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+        _, labels, centers = cv2.kmeans(pixel_values, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+        centers = np.uint8(centers)
+        segmented = centers[labels.flatten()]
+        self.result = segmented.reshape(self.result.shape)
+        self._save("kmeans_segmented")
+        return self
 
-# Extract the bottom region
-bottom_region = cv2.bitwise_and(gray_image, gray_image, mask=mask)
-saver.save(bottom_region, "bottom_region_grayscale")
+    def apply_clahe(self, clip_limit=2.0, grid_size=(8, 8)):
+        """Enhances contrast using CLAHE and saves the step."""
+        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=grid_size)
+        self.result = clahe.apply(self.result)
+        self._save("clahe_enhanced")
+        return self
 
-# Reshape the grayscale bottom region for K-means clustering
-pixel_values = bottom_region.reshape((-1, 1))
-pixel_values = np.float32(pixel_values)  # Convert to float32 for K-means
+    def detect_edges(self, threshold1=50, threshold2=150):
+        """Performs edge detection using the Canny algorithm and saves the step."""
+        self.result = cv2.Canny(self.result, threshold1, threshold2)
+        self._save("edges_detected")
+        return self
 
-# Apply K-means clustering
-k = 5  # Number of clusters
-criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
-_, labels, centers = cv2.kmeans(pixel_values, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+    def refine_edges(self, kernel_size=(2, 2), iterations=1):
+        """Applies morphological operations to refine edges and saves the step."""
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
+        self.result = cv2.dilate(self.result, kernel, iterations=iterations)
+        self.result = cv2.erode(self.result, kernel, iterations=iterations)
+        self._save("refined_edges")
+        return self
 
-# Map pixels to their cluster centers
-centers = np.uint8(centers)
-segmented_image = centers[labels.flatten()]
-segmented_image = segmented_image.reshape(gray_image.shape)
+    def detect_lines(self, min_line_length=80, max_line_gap=20, threshold=100):
+        """Detects lines using the Hough Line Transform and saves the step."""
+        lines = cv2.HoughLinesP(self.result, 1, np.pi / 180, threshold, minLineLength=min_line_length, maxLineGap=max_line_gap)
+        line_image = np.copy(self.image)
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                if x2 - x1 != 0:
+                    slope = abs((y2 - y1) / (x2 - x1))
+                    if slope > 5:  # Vertical lines only
+                        cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        self.result = line_image
+        self._save("final_detected_lines")
+        return self
 
-# Combine the segmented bottom region with the original top region
-top_region = cv2.bitwise_and(gray_image, gray_image, mask=cv2.bitwise_not(mask))
-combined_image = cv2.add(top_region, segmented_image)
-saver.save(combined_image, "kmeans_segmented_image")
+    def display_results(self):
+        """Displays all saved images."""
+        self.saver.display_images()
 
-# Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
-clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-enhanced_combined = clahe.apply(combined_image)
-saver.save(enhanced_combined, "enhanced_combined_image")
 
-# Perform edge detection using Canny
-edges = cv2.Canny(enhanced_combined, 50, 150)
-saver.save(edges, "edges_detected")
+# Example Usage
+if __name__ == "__main__":
+    processor = ImageProcessor('test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg')
 
-# Use morphological operations to refine edges
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-dilated = cv2.dilate(edges, kernel, iterations=1)
-eroded = cv2.erode(dilated, kernel, iterations=1)
-saver.save(eroded, "refined_edges")
-
-# Detect lines using Hough Line Transform
-lines = cv2.HoughLinesP(eroded, 1, np.pi / 180, threshold=100, minLineLength=80, maxLineGap=20)
-
-line_image = np.copy(image)
-
-# Filter lines based on orientation (vertical lines)
-if lines is not None:
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        if x2 - x1 != 0:  # Avoid division by zero
-            slope = abs((y2 - y1) / (x2 - x1))
-            if slope > 5:  # Vertical lines only
-                cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-saver.save(line_image, "final_detected_lines")
-
-# Display the results
-saver.display_images()
+    processor.convert_to_grayscale() \
+        .apply_mask(mask_ratio=0.3) \
+        .apply_kmeans(k=5) \
+        .apply_clahe() \
+        .detect_edges() \
+        .refine_edges() \
+        .detect_lines() \
+        .display_results()
