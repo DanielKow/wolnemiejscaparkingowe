@@ -102,7 +102,7 @@ if __name__ == "__main__":
     processor.convert_to_grayscale() \
         .apply_kmeans_to_bottom(mask_ratio=0.3, k=5) \
         .apply_clahe() \
-        .apply_blur() \
+        .apply_blur(kernel_size=(3,3)) \
         .detect_edges() \
         .refine_edges() \
         .detect_lines() \
