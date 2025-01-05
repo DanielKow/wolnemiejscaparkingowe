@@ -24,8 +24,8 @@ cv2.rectangle(mask, (0, int(height * 0.7)), (width, height), 255, -1)  # White r
 saver.save(mask, "blur_mask")
 
 # Apply different levels of blur
-light_blur = cv2.GaussianBlur(image, (3, 3), 0)  # Light blur for the whole image
-strong_blur = cv2.GaussianBlur(image, (11, 11), 0)  # Strong blur for noisy regions
+light_blur = cv2.GaussianBlur(image, (1, 1), 0)  # Light blur for the whole image
+strong_blur = cv2.GaussianBlur(image, (9, 9), 0)  # Strong blur for noisy regions
 
 # Combine the two blurred versions using the mask
 blurred_image = cv2.bitwise_and(strong_blur, strong_blur, mask=mask) + \
