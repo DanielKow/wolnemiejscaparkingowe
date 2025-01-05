@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
 
 
 def save_image_to_run_dir(image, filename, run_dir):
@@ -47,53 +48,48 @@ os.makedirs(run_dir, exist_ok=True)
 image_path = 'test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg'
 image = cv2.imread(image_path)
 
-# Convert to grayscale
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# Reshape the image to 2D for k-means clustering
+pixels = image.reshape((-1, 3))
+pixels = np.float32(pixels)
 
-# Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
-clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-enhanced = clahe.apply(gray)
+# Apply K-means clustering
+num_clusters = 4  # Adjust based on the number of color groups in your image
+kmeans = KMeans(n_clusters=num_clusters, random_state=0, n_init=10)
+labels = kmeans.fit_predict(pixels)
+cluster_centers = kmeans.cluster_centers_.astype("uint8")
 
-# Save the enhanced image
-save_image_to_run_dir(enhanced, "enhanced_contrast.jpg", run_dir)
+# Create the clustered image
+segmented_image = cluster_centers[labels].reshape(image.shape)
 
-# Apply Gaussian blur to reduce noise slightly
-blurred = cv2.GaussianBlur(enhanced, (5, 5), 0)
+# Save the clustered image
+save_image_to_run_dir(segmented_image, "clustered_image.jpg", run_dir)
 
-# Save the blurred image
-save_image_to_run_dir(blurred, "blurred.jpg", run_dir)
+# Convert the clustered image to grayscale
+gray = cv2.cvtColor(segmented_image, cv2.COLOR_BGR2GRAY)
 
-# Apply adaptive thresholding with tuned parameters
-adaptive_thresh = cv2.adaptiveThreshold(
-    blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 4
-)
+# Apply thresholding to isolate potential lines
+_, thresholded = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
 
-# Save the adaptive threshold image
-save_image_to_run_dir(adaptive_thresh, "adaptive_thresh_tuned.jpg", run_dir)
-
-# Dilate the thresholded image to emphasize lines
-kernel = np.ones((3, 3), np.uint8)
-dilated = cv2.dilate(adaptive_thresh, kernel, iterations=1)
-
-# Save the dilated image
-save_image_to_run_dir(dilated, "dilated.jpg", run_dir)
+# Save the thresholded image
+save_image_to_run_dir(thresholded, "thresholded.jpg", run_dir)
 
 # Edge detection
-edges = cv2.Canny(dilated, 50, 150, apertureSize=3)
+edges = cv2.Canny(thresholded, 50, 150, apertureSize=3)
 
 # Save the edge-detected image
 save_image_to_run_dir(edges, "edges.jpg", run_dir)
 
 # Detect lines using Hough Transform
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=10)
+lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=100, maxLineGap=20)
 
 # Draw the detected lines on the original image
 line_image = np.copy(image)
 if lines is not None:
     for line in lines:
         x1, y1, x2, y2 = line[0]
-        # Filter lines based on their orientation (e.g., mostly horizontal or vertical)
-        if abs(y2 - y1) < 20 or abs(x2 - x1) < 20:  # Adjust this threshold as needed
+        # Filter lines that are approximately parallel
+        angle = abs(np.arctan2(y2 - y1, x2 - x1) * 180.0 / np.pi)
+        if 85 <= angle <= 95 or -5 <= angle <= 5:  # Near-vertical or near-horizontal
             cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
 # Save the final result image
@@ -101,10 +97,10 @@ save_image_to_run_dir(line_image, "detected_lines.jpg", run_dir)
 
 # Display results
 images_to_display = [
-    gray, enhanced, adaptive_thresh, dilated, edges, line_image
+    image, segmented_image, thresholded, edges, line_image
 ]
 titles = [
-    "Grayscale", "Enhanced Contrast", "Adaptive Threshold", "Dilated", "Edges", "Detected Lines"
+    "Original Image", "Clustered Image", "Thresholded", "Edges", "Detected Lines"
 ]
 
 display_images(images_to_display, titles)
