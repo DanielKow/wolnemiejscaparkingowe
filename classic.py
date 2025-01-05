@@ -19,8 +19,17 @@ saver.save(image, "original_image")
 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 saver.save(gray_image, "grayscale_image")
 
-# Reshape the grayscale image for K-means clustering
-pixel_values = gray_image.reshape((-1, 1))
+# Create a mask for the bottom region
+height, width = gray_image.shape
+mask = np.zeros((height, width), dtype=np.uint8)
+cv2.rectangle(mask, (0, int(height * 0.7)), (width, height), 255, -1)  # Bottom 30%
+
+# Extract the bottom region
+bottom_region = cv2.bitwise_and(gray_image, gray_image, mask=mask)
+saver.save(bottom_region, "bottom_region_grayscale")
+
+# Reshape the grayscale bottom region for K-means clustering
+pixel_values = bottom_region.reshape((-1, 1))
 pixel_values = np.float32(pixel_values)  # Convert to float32 for K-means
 
 # Apply K-means clustering
@@ -32,15 +41,19 @@ _, labels, centers = cv2.kmeans(pixel_values, k, None, criteria, 10, cv2.KMEANS_
 centers = np.uint8(centers)
 segmented_image = centers[labels.flatten()]
 segmented_image = segmented_image.reshape(gray_image.shape)
-saver.save(segmented_image, "segmented_image")
 
-# Optional: Enhance contrast of the segmented image using CLAHE
+# Combine the segmented bottom region with the original top region
+top_region = cv2.bitwise_and(gray_image, gray_image, mask=cv2.bitwise_not(mask))
+combined_image = cv2.add(top_region, segmented_image)
+saver.save(combined_image, "kmeans_segmented_image")
+
+# Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-enhanced_segmented = clahe.apply(segmented_image)
-saver.save(enhanced_segmented, "enhanced_segmented_image")
+enhanced_combined = clahe.apply(combined_image)
+saver.save(enhanced_combined, "enhanced_combined_image")
 
-# Perform edge detection on the enhanced segmented image
-edges = cv2.Canny(enhanced_segmented, 50, 150)
+# Perform edge detection using Canny
+edges = cv2.Canny(enhanced_combined, 50, 150)
 saver.save(edges, "edges_detected")
 
 # Use morphological operations to refine edges
