@@ -21,23 +21,30 @@ class ImageProcessor:
         self._save("grayscale_image")
         return self
 
-    def apply_mask(self, mask_ratio=0.3):
-        """Applies a mask to isolate the bottom part of the image and saves the step."""
+    def apply_kmeans_to_bottom(self, mask_ratio=0.3, k=5):
+        """Applies K-means clustering to the bottom portion of the image and saves the step."""
         height, width = self.result.shape[:2]
+
+        # Create a mask for the bottom region
         mask = np.zeros((height, width), dtype=np.uint8)
         cv2.rectangle(mask, (0, int(height * (1 - mask_ratio))), (width, height), 255, -1)
-        self.result = cv2.bitwise_and(self.result, self.result, mask=mask)
-        self._save("masked_image")
-        return self
 
-    def apply_kmeans(self, k=5):
-        """Applies K-means clustering to the current image and saves the step."""
-        pixel_values = self.result.reshape((-1, 1)).astype(np.float32)
+        # Extract the bottom region
+        bottom_region = cv2.bitwise_and(self.result, self.result, mask=mask)
+
+        # Reshape the bottom region for K-means clustering
+        pixel_values = bottom_region.reshape((-1, 1)).astype(np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
         _, labels, centers = cv2.kmeans(pixel_values, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+
+        # Map pixels to their cluster centers
         centers = np.uint8(centers)
         segmented = centers[labels.flatten()]
-        self.result = segmented.reshape(self.result.shape)
+        segmented_image = segmented.reshape(self.result.shape)
+
+        # Combine the segmented bottom with the original top
+        top_region = cv2.bitwise_and(self.result, self.result, mask=cv2.bitwise_not(mask))
+        self.result = cv2.add(top_region, segmented_image)
         self._save("kmeans_segmented")
         return self
 
@@ -87,8 +94,7 @@ if __name__ == "__main__":
     processor = ImageProcessor('test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg')
 
     processor.convert_to_grayscale() \
-        .apply_mask(mask_ratio=0.3) \
-        .apply_kmeans(k=5) \
+        .apply_kmeans_to_bottom(mask_ratio=0.3, k=5) \
         .apply_clahe() \
         .detect_edges() \
         .refine_edges() \
