@@ -1,0 +1,7 @@
+train: mini_train/images
+val: mini_valid/images
+
+nc: 2
+names:
+  0: free
+  1: occupied
