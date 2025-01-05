@@ -101,13 +101,25 @@ class ImageProcessor:
 
         # Detect lines
         lines = lsd.detect(self.result)[0]
+        
         if lines is None:
             print("No lines detected.")
             return self
-        drawn_lines = lsd.drawSegments(self.image.copy(), lines)
         
+        vertical_lines_image = np.zeros_like(self.image)
+        
+        vertical_lines = []
+        
+        for line in lines:
+            x1, y1, x2, y2 = map(int, line[0])
+            if x2 - x1 != 0:
+                slope = abs((y2 - y1) / (x2 - x1))
+                if slope > 5:
+                    vertical_lines.append(line)
+                    cv2.line(vertical_lines_image, (x1, y1), (x2, y2), (255, 255, 255), 1)
+    
         # Display the result
-        self._save("detected_parking_slots", drawn_lines)
+        self._save("detected_parking_slots", vertical_lines_image)
         return self
 
     def detect_lines_ransac(self):
@@ -148,7 +160,7 @@ class ImageProcessor:
         self.result = line_image
         self._save("ransac_detected_lines")
         return self
-
+    
     def display_results(self):
         """Displays all saved images."""
         self.saver.display_images()
