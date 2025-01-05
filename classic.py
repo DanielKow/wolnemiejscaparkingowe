@@ -24,22 +24,28 @@ class ImageProcessor:
     def apply_kmeans_to_bottom(self, mask_ratio=0.3, k=5):
         """Applies K-means clustering to the bottom portion of the image and saves the step."""
         height, width = self.result.shape[:2]
+
+        # Create a mask for the bottom region
         mask = np.zeros((height, width), dtype=np.uint8)
         cv2.rectangle(mask, (0, int(height * (1 - mask_ratio))), (width, height), 255, -1)
-        
+
+        # Extract the bottom region
         bottom_region = cv2.bitwise_and(self.result, self.result, mask=mask)
-        lab_image = cv2.cvtColor(bottom_region, cv2.COLOR_BGR2Lab)
-        pixel_values = lab_image.reshape((-1, 3)).astype(np.float32)
-        
+
+        # Reshape the bottom region for K-means clustering
+        pixel_values = bottom_region.reshape((-1, 1)).astype(np.float32)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
         _, labels, centers = cv2.kmeans(pixel_values, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-        
+
+        # Map pixels to their cluster centers
         centers = np.uint8(centers)
         segmented = centers[labels.flatten()]
-        segmented_image = segmented.reshape(lab_image.shape)
-        
-        self.result = cv2.addWeighted(bottom_region, 0.5, segmented_image, 0.5, 0)
-        self._save("kmeans_lab_segmented")
+        segmented_image = segmented.reshape(self.result.shape)
+
+        # Combine the segmented bottom with the original top
+        top_region = cv2.bitwise_and(self.result, self.result, mask=cv2.bitwise_not(mask))
+        self.result = cv2.add(top_region, segmented_image)
+        self._save("kmeans_segmented")
         return self
 
     def apply_clahe(self, clip_limit=2.0, grid_size=(8, 8)):
@@ -47,12 +53,6 @@ class ImageProcessor:
         clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=grid_size)
         self.result = clahe.apply(self.result)
         self._save("clahe_enhanced")
-        return self
-
-    def apply_blur(self, kernel_size=(5, 5)):
-        """Applies Gaussian blur to the image and saves the step."""
-        self.result = cv2.GaussianBlur(self.result, kernel_size, 0)
-        self._save("blurred_image")
         return self
 
     def detect_edges(self, threshold1=50, threshold2=150):
@@ -96,7 +96,6 @@ if __name__ == "__main__":
     processor.convert_to_grayscale() \
         .apply_kmeans_to_bottom(mask_ratio=0.3, k=5) \
         .apply_clahe() \
-        .apply_blur() \
         .detect_edges() \
         .refine_edges() \
         .detect_lines() \
