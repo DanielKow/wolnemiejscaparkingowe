@@ -56,7 +56,7 @@ edges = cv2.Canny(enhanced_gray, 50, 150)
 saver.save(edges, "edges_detected")
 
 # Use morphological operations to enhance the edges
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
 dilated = cv2.dilate(edges, kernel, iterations=1)
 eroded = cv2.erode(dilated, kernel, iterations=1)  # Optional: Refine edges by erosion
 saver.save(eroded, "refined_edges")
