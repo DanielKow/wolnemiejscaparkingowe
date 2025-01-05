@@ -6,24 +6,42 @@ from saving_results import ResultsSaver
 saver = ResultsSaver()
 
 # Load the image
-image_path = 'test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg'
+image_path = '/mnt/data/original_image.jpg'
 image = cv2.imread(image_path)
 saver.save(image, "original_image")
 
+# Define Region of Interest (ROI)
+mask = np.zeros_like(image[:, :, 0])  # Create a single-channel mask
+height, width = mask.shape
+
+# Define a polygon that covers the parking lot area
+polygon = np.array([
+    [0, height * 0.6],  # Start bottom-left, just above the paving
+    [width, height * 0.6],  # Bottom-right
+    [width, 0],  # Top-right
+    [0, 0]  # Top-left
+], np.int32)
+
+cv2.fillPoly(mask, [polygon], 255)  # Fill the region with white (255)
+
+# Apply the mask to focus only on the relevant area
+masked_image = cv2.bitwise_and(image, image, mask=mask)
+saver.save(masked_image, "roi_masked_image")
+
 # Convert to grayscale
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+gray = cv2.cvtColor(masked_image, cv2.COLOR_BGR2GRAY)
 saver.save(gray, "grayscale_image")
 
-# Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
+# Apply CLAHE for contrast enhancement
 clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
 enhanced_gray = clahe.apply(gray)
 saver.save(enhanced_gray, "enhanced_grayscale")
 
-# Perform edge detection
+# Perform edge detection with adjusted thresholds
 edges = cv2.Canny(enhanced_gray, 50, 150)
 saver.save(edges, "edges_detected")
 
-# Use morphological operations to enhance the edges
+# Use morphological operations to enhance edges
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 dilated = cv2.dilate(edges, kernel, iterations=1)
 saver.save(dilated, "dilated_edges")
@@ -44,7 +62,7 @@ if lines is not None:
                 vertical_lines.append((x1, y1, x2, y2))
                 cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-saver.save(line_image, "vertical_lines_detected")
+saver.save(line_image, "vertical_lines_detected_with_roi")
 
 # Display the results
 saver.display_images()
