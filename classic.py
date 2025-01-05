@@ -60,7 +60,7 @@ class ImageProcessor:
         self._save("clahe_enhanced")
         return self
 
-    def apply_blur(self, kernel_size=(5, 5)):
+    def apply_blur(self, kernel_size=(3, 3)):
         """Applies Gaussian blur and saves the step."""
         self.result = cv2.GaussianBlur(self.result, kernel_size, 0)
         self._save("blurred")
@@ -102,59 +102,21 @@ class ImageProcessor:
 
         # Detect lines
         lines = lsd.detect(self.result)[0]
-
+        
+        # Create a copy of the original image for drawing
+        lines_image = self.image.copy()
+        
+        # Draw the detected lines
         if lines is None:
             print("No lines detected.")
             return self
-
-        filtered_vertical_lines = []
-    
-        # Create a mask for detected lines
-        mask = np.zeros_like(self.image, dtype=np.uint8)
-    
+        
         for line in lines:
-            x1, y1, x2, y2 = map(int, line[0])
-            if x2 - x1 != 0:  # Avoid division by zero
-                slope = abs((y2 - y1) / (x2 - x1))
-                if slope > 5:  # Detect steep lines as vertical
-                    # Draw the line on the mask
-                    cv2.line(mask, (x1, y1), (x2, y2), 255, 1)
-                    filtered_vertical_lines.append(line)
-    
-        # Filter lines based on "emptiness" between them
-        verified_lines = []
-        for i, line1 in enumerate(filtered_vertical_lines):
-            for j, line2 in enumerate(filtered_vertical_lines):
-                if i >= j:  # Avoid duplicate checks and self-comparison
-                    continue
-    
-                x1_a, y1_a, x2_a, y2_a = map(int, line1[0])
-                x1_b, y1_b, x2_b, y2_b = map(int, line2[0])
-    
-                # Check if the lines are close enough to form a region of interest
-                if abs(x1_a - x1_b) < 50:  # Adjust threshold for line proximity
-                    # Define the bounding box between the two lines
-                    x_min = min(x1_a, x1_b)
-                    x_max = max(x1_a, x1_b)
-                    y_min = min(y1_a, y2_a, y1_b, y2_b)
-                    y_max = max(y1_a, y2_a, y1_b, y2_b)
-    
-                    # Extract the region of interest
-                    roi = self.result[y_min:y_max, x_min:x_max]
-    
-                    # Check for non-empty region
-                    if cv2.countNonZero(roi) == 0:  # Region is empty
-                        verified_lines.append(line1)
-                        verified_lines.append(line2)
-    
-        # Draw the verified lines
-        vertical_lines_image = self.image.copy()
-        for line in verified_lines:
-            x1, y1, x2, y2 = map(int, line[0])
-            cv2.line(vertical_lines_image, (x1, y1), (x2, y2), (0, 0, 255), 1)
-    
+            x1, y1, x2, y2 = line.flatten().astype(int)
+            cv2.line(lines_image, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
         # Display the result
-        self.result = vertical_lines_image
+        self.result = lines_image
         self._save("vertical_lines")
         return self
 
@@ -202,13 +164,13 @@ class ImageProcessor:
         self.saver.display_images()
 
 
-processor = ImageProcessor('test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg')
+processor = ImageProcessor('test_images/2012-09-12_06_36_36_jpg.rf.08869047c7e9f62f5ce9334546b52958.jpg')
 
 processor.convert_to_grayscale() \
-    .apply_kmeans_to_bottom(mask_ratio=0.3, k=5) \
+    .apply_kmeans_to_bottom() \
     .apply_clahe() \
-    .apply_blur(kernel_size=(3, 3)) \
+    .apply_blur() \
     .detect_edges() \
-    .refine_edges(kernel_size=(4, 4)) \
+    .refine_edges() \
     .detect_lines_lsd() \
     .display_results()
