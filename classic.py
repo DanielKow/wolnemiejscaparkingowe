@@ -107,7 +107,6 @@ class ImageProcessor:
             print("No lines detected.")
             return self
 
-        vertical_lines_image = np.zeros_like(self.image)
         filtered_vertical_lines = []
     
         # Create a mask for detected lines
@@ -141,7 +140,7 @@ class ImageProcessor:
                     y_max = max(y1_a, y2_a, y1_b, y2_b)
     
                     # Extract the region of interest
-                    roi = self.image[y_min:y_max, x_min:x_max]
+                    roi = self.result[y_min:y_max, x_min:x_max]
     
                     # Check for non-empty region
                     if cv2.countNonZero(roi) == 0:  # Region is empty
@@ -149,12 +148,14 @@ class ImageProcessor:
                         verified_lines.append(line2)
     
         # Draw the verified lines
+        vertical_lines_image = self.image.copy()
         for line in verified_lines:
             x1, y1, x2, y2 = map(int, line[0])
-            cv2.line(vertical_lines_image, (x1, y1), (x2, y2), (255, 255, 255), 1)
+            cv2.line(vertical_lines_image, (x1, y1), (x2, y2), (0, 255, 255), 1)
     
         # Display the result
-        self._save("filtered_vertical_lines", vertical_lines_image)
+        self.result = vertical_lines_image
+        self._save("vertical_lines")
         return self
 
     def detect_lines_ransac(self):
@@ -208,6 +209,6 @@ processor.convert_to_grayscale() \
     .apply_clahe() \
     .apply_blur(kernel_size=(3, 3)) \
     .detect_edges() \
-    .refine_edges() \
+    .refine_edges(kernel_size=(4, 4)) \
     .detect_lines_lsd() \
     .display_results()
