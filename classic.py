@@ -15,8 +15,12 @@ if image is None:
 
 saver.save(image, "original_image")
 
+# Apply Gaussian Blur to reduce noise
+blurred_image = cv2.GaussianBlur(image, (5, 5), 0)  # Kernel size (5, 5)
+saver.save(blurred_image, "blurred_image")
+
 # Convert to grayscale
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+gray = cv2.cvtColor(blurred_image, cv2.COLOR_BGR2GRAY)
 saver.save(gray, "grayscale_image")
 
 # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
