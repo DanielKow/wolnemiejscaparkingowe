@@ -15,26 +15,35 @@ if image is None:
 
 saver.save(image, "original_image")
 
-# Create a mask to define areas for stronger blur (e.g., bottom of the image)
+# Create a mask for the bottom region
 height, width, _ = image.shape
 mask = np.zeros((height, width), dtype=np.uint8)
+cv2.rectangle(mask, (0, int(height * 0.7)), (width, height), 255, -1)  # Bottom 30%
 
-# Define the region for stronger blur (e.g., bottom 30% of the image)
-cv2.rectangle(mask, (0, int(height * 0.7)), (width, height), 255, -1)  # White rectangle for bottom
-saver.save(mask, "blur_mask")
+# Extract the bottom region for K-means clustering
+bottom_region = cv2.bitwise_and(image, image, mask=mask)
 
-# Apply different levels of blur
-light_blur = cv2.GaussianBlur(image, (1, 1), 0)  # Light blur for the whole image
-strong_blur = cv2.GaussianBlur(image, (7, 7), 0)  # Strong blur for noisy regions
+# Reshape the bottom region for K-means clustering
+pixel_values = bottom_region.reshape((-1, 3))
+pixel_values = np.float32(pixel_values)  # Convert to float32 for K-means
 
-# Combine the two blurred versions using the mask
-blurred_image = cv2.bitwise_and(strong_blur, strong_blur, mask=mask) + \
-                cv2.bitwise_and(light_blur, light_blur, mask=cv2.bitwise_not(mask))
+# Apply K-means clustering
+k = 4  # Number of clusters
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+_, labels, centers = cv2.kmeans(pixel_values, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
-saver.save(blurred_image, "selectively_blurred_image")
+# Map pixels to their cluster centers
+centers = np.uint8(centers)
+segmented_image = centers[labels.flatten()]
+segmented_image = segmented_image.reshape(bottom_region.shape)
+
+# Combine the clustered bottom region with the original top region
+top_region = cv2.bitwise_and(image, image, mask=cv2.bitwise_not(mask))
+combined_image = cv2.addWeighted(top_region, 1, segmented_image, 1, 0)
+saver.save(combined_image, "kmeans_segmented_image")
 
 # Convert to grayscale
-gray = cv2.cvtColor(blurred_image, cv2.COLOR_BGR2GRAY)
+gray = cv2.cvtColor(combined_image, cv2.COLOR_BGR2GRAY)
 saver.save(gray, "grayscale_image")
 
 # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement
