@@ -53,7 +53,7 @@ pixels = image.reshape((-1, 3))
 pixels = np.float32(pixels)
 
 # Apply K-means clustering
-num_clusters = 4  # Adjust based on the number of color groups in your image
+num_clusters = 8  # Adjust based on the number of color groups in your image
 kmeans = KMeans(n_clusters=num_clusters, random_state=0, n_init=10)
 labels = kmeans.fit_predict(pixels)
 cluster_centers = kmeans.cluster_centers_.astype("uint8")
