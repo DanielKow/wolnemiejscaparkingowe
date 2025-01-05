@@ -6,7 +6,7 @@ from saving_results import ResultsSaver
 saver = ResultsSaver()
 
 # Load the image
-image_path = '/mnt/data/original_image.jpg'
+image_path = 'test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg'
 image = cv2.imread(image_path)
 saver.save(image, "original_image")
 
