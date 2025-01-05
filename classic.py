@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+from sklearn.linear_model import RANSACRegressor
+
 from saving_results import ResultsSaver
 
 
@@ -8,8 +10,9 @@ class ImageProcessor:
         self.image = cv2.imread(image_path)
         if self.image is None:
             raise ValueError("Cannot load the image. Check the file path.")
-        self.result = self.image.copy()  # Keeps track of the current state of the image
+        self.result = self.image.copy()  
         self.saver = ResultsSaver()
+        self._save("original_image")
 
     def _save(self, step_name):
         """Internal method to save the current state of the image."""
@@ -75,7 +78,7 @@ class ImageProcessor:
         self._save("refined_edges")
         return self
 
-    def detect_lines(self, min_line_length=80, max_line_gap=20, threshold=100):
+    def detect_lines_hough(self, min_line_length=80, max_line_gap=20, threshold=100):
         """Detects lines using the Hough Line Transform and saves the step."""
         lines = cv2.HoughLinesP(self.result, 1, np.pi / 180, threshold, minLineLength=min_line_length, maxLineGap=max_line_gap)
         line_image = np.copy(self.image)
@@ -90,20 +93,82 @@ class ImageProcessor:
         self._save("final_detected_lines")
         return self
 
+    def detect_lines_lsd(self):
+        """Detects parking slots based on the detected lines and saves the step."""
+        lsd = cv2.createLineSegmentDetector()
+
+        # Detect lines
+        lines = lsd.detect(self.result)[0]
+
+        vertical_lines = []
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            if abs(x2 - x1) < 5:  # Vertical line threshold (small horizontal difference)
+                vertical_lines.append((int(round(x1)), int(round(y1)), int(round(x2)), int(round(y2))))
+
+        # Draw the detected lines
+        drawn_lines = self.image.copy()
+        for line in vertical_lines:
+            x1, y1, x2, y2 = line
+            cv2.line(drawn_lines, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        
+        # Display the result
+        self.result = drawn_lines
+        self._save("detected_parking_slots")
+        
+        return self
+
+    def detect_lines_ransac(self):
+        """Detects lines using the RANSAC algorithm and saves the step."""
+        # Extract the edge points from the image
+        y_coords, x_coords = np.where(self.result > 0)  # Edge pixels (non-zero)
+    
+        if len(x_coords) < 2:  # Not enough points to fit a line
+            print("Not enough edge points for RANSAC line detection.")
+            return self
+    
+        # Stack the coordinates
+        points = np.column_stack((x_coords, y_coords))
+    
+        # Initialize RANSAC
+        ransac = RANSACRegressor(residual_threshold=10, max_trials=100)
+    
+        # Fit RANSAC to the points
+        ransac.fit(points[:, 0].reshape(-1, 1), points[:, 1])
+    
+        # Predict the inlier line
+        line_x = np.linspace(0, self.result.shape[1], 1000)  # x-coordinates for line
+        line_y = ransac.predict(line_x.reshape(-1, 1))       # Corresponding y-coordinates
+    
+        # Convert to integer for drawing
+        line_x = line_x.astype(int)
+        line_y = line_y.astype(int)
+    
+        # Create a copy of the original image for drawing
+        line_image = self.image.copy()
+    
+        # Draw the RANSAC line
+        for i in range(len(line_x) - 1):
+            if 0 <= line_x[i] < line_image.shape[1] and 0 <= line_y[i] < line_image.shape[0]:
+                cv2.line(line_image, (line_x[i], line_y[i]), (line_x[i+1], line_y[i+1]), (0, 0, 255), 2)
+    
+        # Save and display the result
+        self.result = line_image
+        self._save("ransac_detected_lines")
+        return self
+
     def display_results(self):
         """Displays all saved images."""
         self.saver.display_images()
 
 
-# Example Usage
-if __name__ == "__main__":
-    processor = ImageProcessor('test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg')
+processor = ImageProcessor('test_images/2012-09-11_16_48_36_jpg.rf.4ecc8c87c61680ccc73edc218a2c8d7d.jpg')
 
-    processor.convert_to_grayscale() \
-        .apply_kmeans_to_bottom(mask_ratio=0.3, k=5) \
-        .apply_clahe() \
-        .apply_blur(kernel_size=(3,3)) \
-        .detect_edges() \
-        .refine_edges() \
-        .detect_lines() \
-        .display_results()
+processor.convert_to_grayscale() \
+    .apply_kmeans_to_bottom(mask_ratio=0.3, k=5) \
+    .apply_clahe() \
+    .apply_blur(kernel_size=(3,3)) \
+    .detect_edges() \
+    .refine_edges() \
+    .detect_lines_lsd() \
+    .display_results()
