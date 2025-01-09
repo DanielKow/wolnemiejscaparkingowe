@@ -214,14 +214,19 @@ class ImageProcessor:
         self.saver.display_images()
 
 
-processor = ImageProcessor('test_images/2.jpg')
+processor = ImageProcessor('test_images/3.jpg')
 
 processor \
     .convert_to_grayscale() \
+    .apply_gaussian_blur() \
+    .apply_gaussian_blur_bottom(kernel_size=(5, 5)) \
+    .draw_histogram()  \
+    .apply_kmeans_to_bottom(k=2) \
+    .draw_histogram() \
+    .apply_bilateral_filter_bottom(sigma_color=90, sigma_space=90) \
     .draw_histogram() \
     .apply_clahe() \
     .draw_histogram() \
-    .apply_bilateral_filter_bottom(d=9, sigma_color=100, sigma_space=100) \
     .detect_edges() \
     .refine_edges() \
     .detect_lines_lsd() \
