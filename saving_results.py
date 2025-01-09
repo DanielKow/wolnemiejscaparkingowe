@@ -27,14 +27,6 @@ class ResultsSaver:
         print(f"Saved: {filepath}")
         self.images_and_titles.append((image, title))
 
-    def save_plot(self, plot, title):
-        """
-        Saves the given plot to the specified run directory.
-        """
-        filepath = os.path.join(self.run_dir, title + ".jpg")
-        plot.savefig(filepath)
-        print(f"Saved: {filepath}")
-
     def display_images(self):
         """Displays all saved images dynamically."""
     

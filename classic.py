@@ -205,7 +205,6 @@ class ImageProcessor:
         plt.plot(hist)
         plt.xlim([0, 256])
         plt.show()
-        self.saver.save_plot(plt, "histogram")
         plt.close()
         return self
 
