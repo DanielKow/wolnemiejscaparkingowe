@@ -217,13 +217,9 @@ def process_image(image_path):
         .convert_to_grayscale() \
         .apply_gaussian_blur() \
         .apply_gaussian_blur_bottom(kernel_size=(5, 5)) \
-        .draw_histogram() \
         .apply_kmeans_to_bottom(k=2) \
-        .draw_histogram() \
         .apply_bilateral_filter_bottom(sigma_color=90, sigma_space=90) \
-        .draw_histogram() \
         .apply_clahe() \
-        .draw_histogram() \
         .detect_edges() \
         .refine_edges() \
         .mark_free_spaces() \
