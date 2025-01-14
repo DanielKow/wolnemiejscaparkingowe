@@ -1,11 +1,9 @@
 import os
 from PIL import Image
 
-# Define directories
 train_images_dir = 'datasets/train/images'
 valid_images_dir = 'datasets/valid/images'
 
-# Target size
 TARGET_SIZE = (640, 640)
 
 def check_image_sizes(directory, target_size):
@@ -27,7 +25,6 @@ def check_image_sizes(directory, target_size):
 train_mismatches = check_image_sizes(train_images_dir, TARGET_SIZE)
 valid_mismatches = check_image_sizes(valid_images_dir, TARGET_SIZE)
 
-# Print results
 if train_mismatches or valid_mismatches:
     print("Obrazy o niewłaściwym rozmiarze:")
 

@@ -10,14 +10,13 @@ def convert_annotations_to_yolo(json_file, output_folder):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    # Load the JSON file
     with open(json_file, 'r') as f:
         data = json.load(f)
 
     category_mapping = {
-        1: 0,  # Free parking slots → YOLO class 0
-        2: 1,  # Occupied parking slots → YOLO class 1
-        0: -1  # Group category in coco → Log
+        1: 0,
+        2: 1,
+        0: -1
     }
 
     for annotation in data.get('annotations', []):
