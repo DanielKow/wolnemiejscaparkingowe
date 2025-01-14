@@ -19,7 +19,7 @@ class ResultsSaver:
         filepath = os.path.join(self.run_dir, title + ".jpg")
         
         cv2.imwrite(filepath, image)
-        print(f"Saved: {filepath}")
+        print(f"Zapisano: {filepath}")
         self.images_and_titles.append((image, title))
 
     def display_images(self):    
