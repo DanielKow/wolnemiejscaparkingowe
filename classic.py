@@ -200,12 +200,14 @@ class ImageProcessor:
 
     def display_results(self):
         self.saver.display_images()
+        return self
         
     def display_final_result(self):
         plt.figure(figsize=(8, 8))
         plt.imshow(cv2.cvtColor(self.result, cv2.COLOR_BGR2RGB))
         plt.axis('off')
         plt.show()
+        return self
 
 
 def process_image(image_path):
@@ -225,7 +227,8 @@ def process_image(image_path):
         .detect_edges() \
         .refine_edges() \
         .mark_free_spaces() \
-        .display_results()
+        .display_results() \
+        .display_final_result()
 
 def get_images_to_process():
     image_files = []
