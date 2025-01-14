@@ -19,3 +19,5 @@ mask = cv2.inRange(image, lower_bound, upper_bound)
 cv2.imshow('Mask', mask)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+cv2.imwrite('mask.jpg', mask)
