@@ -195,6 +195,36 @@ class ImageProcessor:
         self._save("ransac_detected_lines")
         return self
 
+    def mark_free_spaces(self):
+        mask1 = cv2.imread("mask.jpg", cv2.IMREAD_GRAYSCALE)
+        mask2 = self.result
+        
+        _, mask1_binary = cv2.threshold(mask1, 127, 255, cv2.THRESH_BINARY)
+        _, mask2_binary = cv2.threshold(mask2, 127, 255, cv2.THRESH_BINARY)
+        
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask1_binary, connectivity=8)
+        
+        result_mask = mask1_binary.copy()
+        
+        for label in range(1, num_labels):
+            component_mask = (labels == label).astype(np.uint8) * 255
+        
+            intersection = cv2.bitwise_and(component_mask, mask2_binary)
+            if cv2.countNonZero(intersection) > 0:
+                result_mask[labels == label] = 0
+
+        green_overlay = np.zeros_like(self.image, dtype=np.uint8)
+        green_overlay[:] = (0, 255, 0)
+        
+        masked_green = cv2.bitwise_and(green_overlay, green_overlay, mask=result_mask)
+        alpha = 0.5
+        result = cv2.addWeighted(masked_green, alpha, self.image, 1 - alpha, 0)
+        
+        self.result = result
+        self._save("free_spaces")
+        return self
+
+
     def draw_histogram(self):
         """Draws a histogram of pixel intensities and saves the step."""
         hist = cv2.calcHist([self.result], [0], None, [256], [0, 256])
@@ -214,7 +244,7 @@ class ImageProcessor:
 
 
 if __name__ == "__main__":
-    processor = ImageProcessor('test_images/3.jpg')
+    processor = ImageProcessor('test_images/1.jpg')
     
     processor \
         .convert_to_grayscale() \
@@ -229,5 +259,5 @@ if __name__ == "__main__":
         .draw_histogram() \
         .detect_edges() \
         .refine_edges() \
-        .detect_lines_lsd() \
+        .mark_free_spaces() \
         .display_results()
