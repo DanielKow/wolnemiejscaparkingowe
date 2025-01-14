@@ -3,7 +3,7 @@ import numpy as np
 
 image = cv2.imread('empty_marked_full.jpg')
 
-target_color_bgr = [60, 39, 255]  # Convert RGB(254, 40, 60) to BGR(60, 40, 254)
+target_color_bgr = [60, 39, 255]
 
 tolerance = 10
 lower_bound = np.array([max(c - tolerance, 0) for c in target_color_bgr], dtype=np.uint8)
