@@ -1,33 +1,21 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 
-def find_red_rectangles():
-    image = cv2.imread("empty3.jpg")
-    
-    lower_red= np.array([0, 0, 249])
-    upper_red = np.array([0, 0, 255])
-    mask = cv2.inRange(image, lower_red, upper_red)
+# Load the image
+image = cv2.imread('empty_marked_full.jpg')
+print(image[475, 120])
+# Define the target color (BGR instead of RGB)
+target_color_bgr = [60, 39, 255]  # Convert RGB(254, 40, 60) to BGR(60, 40, 254)
 
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-    return contours
+tolerance = 10
+lower_bound = np.array([max(c - tolerance, 0) for c in target_color_bgr], dtype=np.uint8)
+upper_bound = np.array([min(c + tolerance, 255) for c in target_color_bgr], dtype=np.uint8)
 
 
-rectangles = find_red_rectangles()
+# Create the mask
+mask = cv2.inRange(image, lower_bound, upper_bound)
 
-original_image = cv2.imread("empty.jpg")
-image = original_image.copy()
-image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) 
-
-for rectangle in rectangles:
-    points = np.array(rectangle, np.int32)  # Konwersja punktów do formatu NumPy
-    points = points.reshape((-1, 1, 2))  # Dopasowanie wymiarów
-    cv2.polylines(image, [points], isClosed=True, color=(255, 0, 0), thickness=3)  # Kolor czerwony (RGB)
-
-# Wyświetlenie obrazu za pomocą matplotlib.pyplot
-plt.figure(figsize=(10, 10))
-plt.imshow(image)
-plt.axis('off')  # Ukrycie osi
-plt.title("Obraz z narysowanymi czworokątami")
-plt.show()
+# Save or display the mask
+cv2.imshow('Mask', mask)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
