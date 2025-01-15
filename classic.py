@@ -215,9 +215,8 @@ def process_image(image_path):
 
     processor \
         .convert_to_grayscale() \
-        .apply_gaussian_blur() \
-        .apply_gaussian_blur_bottom(kernel_size=(5, 5)) \
-        .apply_kmeans_to_bottom(k=2, mask_ratio=1) \
+        .apply_gaussian_blur(kernel_size=(21, 21)) \
+        .apply_kmeans_to_bottom(k=16, mask_ratio=1) \
         .apply_bilateral_filter_bottom(sigma_color=90, sigma_space=90, mask_ratio=1) \
         .apply_clahe() \
         .detect_edges() \
@@ -236,7 +235,9 @@ def get_images_to_process():
     return image_files
 
 if __name__ == "__main__":
-    for image in get_images_to_process()[:5]:
+    images = get_images_to_process()
+    print(images[4])
+    for image in [images[2]]:
         process_image(image)
         print(f"Przetworzono: {image}")
         print("=" * 50)
