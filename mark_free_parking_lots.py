@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-image = cv2.imread('empty_marked_full.jpg')
+image = cv2.imread('empty_marked.jpg')
 
 target_color_bgr = [60, 39, 255]
 
