@@ -38,6 +38,12 @@ class ImageProcessor:
         self._save("bilateral_filter_bottom")
         return self
 
+    def apply_adaptive_thresholding(self, max_value=255, block_size=11, constant=2):
+        self.result = cv2.adaptiveThreshold(self.result, max_value, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                            cv2.THRESH_BINARY_INV, block_size, constant)
+        self._save("adaptive_thresholded")
+        return self
+
     def apply_kmeans_to_bottom(self, mask_ratio=0.3, k=5):
         height, width = self.result.shape[:2]
 
@@ -128,7 +134,31 @@ class ImageProcessor:
         self.result = lines_image
         self._save("vertical_lines")
         return self
+    
+    def apply_opened_morphology(self, kernel_size=(3, 3), iterations=1):
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
+        self.result = cv2.morphologyEx(self.result, cv2.MORPH_OPEN, kernel, iterations=iterations)
+        self._save("opened_morphology")
+        return self
+    
+    def apply_closed_morphology(self, kernel_size=(3, 3), iterations=1):
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
+        self.result = cv2.morphologyEx(self.result, cv2.MORPH_CLOSE, kernel, iterations=iterations)
+        self._save("closed_morphology")
+        return self
 
+    def apply_erode_morphology(self, kernel_size=(3, 3), iterations=1):
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
+        self.result = cv2.erode(self.result, kernel, iterations=iterations)
+        self._save("eroded_morphology")
+        return self
+    
+    def apply_dilate_morphology(self, kernel_size=(3, 3), iterations=1):
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
+        self.result = cv2.dilate(self.result, kernel, iterations=iterations)
+        self._save("dilated_morphology")
+        return self
+    
     def detect_lines_ransac(self):
         y_coords, x_coords = np.where(self.result > 0)  # Edge pixels (non-zero)
 
@@ -215,10 +245,15 @@ def process_image(image_path):
 
     processor \
         .convert_to_grayscale() \
-        .apply_gaussian_blur(kernel_size=(21, 21)) \
-        .apply_kmeans_to_bottom(k=16, mask_ratio=1) \
-        .apply_bilateral_filter_bottom(sigma_color=90, sigma_space=90, mask_ratio=1) \
-        .apply_clahe() \
+        .apply_gaussian_blur(kernel_size=(13,13)) \
+        .apply_gaussian_blur_bottom() \
+        .apply_bilateral_filter_bottom(mask_ratio=1) \
+        .apply_kmeans_to_bottom(k=2, mask_ratio=1) \
+        .apply_adaptive_thresholding() \
+        .apply_opened_morphology() \
+        .apply_closed_morphology() \
+        .apply_erode_morphology() \
+        .apply_dilate_morphology() \
         .detect_edges() \
         .refine_edges() \
         .mark_free_spaces() \
@@ -236,8 +271,7 @@ def get_images_to_process():
 
 if __name__ == "__main__":
     images = get_images_to_process()
-    print(images[4])
-    for image in [images[2]]:
+    for image in images[3:5]:
         process_image(image)
         print(f"Przetworzono: {image}")
         print("=" * 50)
