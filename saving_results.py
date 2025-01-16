@@ -23,9 +23,9 @@ class ResultsSaver:
         self.images_and_titles.append((image, title))
 
     def display_images(self):    
-        num_images = len(self.images_and_titles)  # Total number of images
-        cols = 4  # Number of columns (can be adjusted)
-        rows = (num_images + cols - 1) // cols  # Calculate rows dynamically
+        num_images = len(self.images_and_titles)
+        cols = 3
+        rows = (num_images + cols - 1) // cols
     
         plt.figure(figsize=(15, 5 * rows))
         for i, (image, title) in enumerate(self.images_and_titles):
