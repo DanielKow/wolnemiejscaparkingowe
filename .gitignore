@@ -163,12 +163,4 @@ cython_debug/
 .DS_Store
 
 # classic
-test_images/
 results/
-
-# yolo
-
-PKLot/
-datasets/
-runs/
-*.pt
