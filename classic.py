@@ -27,15 +27,16 @@ class ImageProcessor:
 
     def apply_bilateral_filter_bottom(self, d=9, sigma_color=75, sigma_space=75, mask_ratio=0.3):
         height, width = self.result.shape[:2]
-    
+
         start_row = int(height * (1 - mask_ratio))
         roi = self.result[start_row:, :]
-    
+
         filtered_roi = cv2.bilateralFilter(roi, d, sigma_color, sigma_space)
-    
+
         # Replace the bottom part of the original image with the filtered result
         self.result[start_row:, :] = filtered_roi
-        self._save("bilateral_filter_bottom_d={}_color={}_space={}_mask={}".format(d, sigma_color, sigma_space, mask_ratio))
+        self._save(
+            "bilateral_filter_bottom_d={}_color={}_space={}_mask={}".format(d, sigma_color, sigma_space, mask_ratio))
         return self
 
     def apply_adaptive_thresholding(self, max_value=255, block_size=11, constant=2):
@@ -75,16 +76,15 @@ class ImageProcessor:
         self.result = cv2.GaussianBlur(self.result, kernel_size, 0)
         self._save("blurred_kernel={}".format(kernel_size))
         return self
-    
-    
+
     def apply_gaussian_blur_bottom(self, kernel_size=(3, 3), mask_ratio=0.3):
         height, width = self.result.shape[:2]
-    
+
         start_row = int(height * (1 - mask_ratio))
         roi = self.result[start_row:, :]
-    
+
         blurred_roi = cv2.GaussianBlur(roi, kernel_size, 0)
-    
+
         self.result[start_row:, :] = blurred_roi
         self._save("blurred_bottom_kernel={}_mask={}".format(kernel_size, mask_ratio))
         return self
@@ -113,20 +113,21 @@ class ImageProcessor:
                     if slope > 5:  # Vertical lines only
                         cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
         self.result = line_image
-        self._save("final_detected_lines_hough_min={}_max={}_threshold={}".format(min_line_length, max_line_gap, threshold))
+        self._save(
+            "final_detected_lines_hough_min={}_max={}_threshold={}".format(min_line_length, max_line_gap, threshold))
         return self
 
     def detect_lines_lsd(self):
         lsd = cv2.createLineSegmentDetector()
 
         lines = lsd.detect(self.result)[0]
-        
+
         lines_image = self.image.copy()
-        
+
         if lines is None:
             print("No lines detected.")
             return self
-        
+
         for line in lines:
             x1, y1, x2, y2 = line.flatten().astype(int)
             cv2.line(lines_image, (x1, y1), (x2, y2), (0, 0, 255), 2)
@@ -134,13 +135,13 @@ class ImageProcessor:
         self.result = lines_image
         self._save("vertical_lines")
         return self
-    
+
     def apply_opened_morphology(self, kernel_size=(3, 3), iterations=1):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
         self.result = cv2.morphologyEx(self.result, cv2.MORPH_OPEN, kernel, iterations=iterations)
         self._save("opened_morphology_kernel={}_iterations={}".format(kernel_size, iterations))
         return self
-    
+
     def apply_closed_morphology(self, kernel_size=(3, 3), iterations=1):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
         self.result = cv2.morphologyEx(self.result, cv2.MORPH_CLOSE, kernel, iterations=iterations)
@@ -152,13 +153,13 @@ class ImageProcessor:
         self.result = cv2.erode(self.result, kernel, iterations=iterations)
         self._save("eroded_morphology_kernel={}_iterations={}".format(kernel_size, iterations))
         return self
-    
+
     def apply_dilate_morphology(self, kernel_size=(3, 3), iterations=1):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
         self.result = cv2.dilate(self.result, kernel, iterations=iterations)
         self._save("dilated_morphology_kernel={}_iterations={}".format(kernel_size, iterations))
         return self
-    
+
     def detect_lines_ransac(self):
         y_coords, x_coords = np.where(self.result > 0)  # Edge pixels (non-zero)
 
@@ -169,7 +170,7 @@ class ImageProcessor:
         points = np.column_stack((x_coords, y_coords))
         ransac = RANSACRegressor(residual_threshold=10, max_trials=100)
         ransac.fit(points[:, 0].reshape(-1, 1), points[:, 1])
-        
+
         line_x = np.linspace(0, self.result.shape[1], 1000)  # x-coordinates for line
         line_y = ransac.predict(line_x.reshape(-1, 1))  # Corresponding y-coordinates
 
@@ -189,32 +190,31 @@ class ImageProcessor:
     def mark_free_spaces(self):
         mask1 = cv2.imread("mask.jpg", cv2.IMREAD_GRAYSCALE)
         mask2 = self.result
-        
+
         _, mask1_binary = cv2.threshold(mask1, 127, 255, cv2.THRESH_BINARY)
         _, mask2_binary = cv2.threshold(mask2, 127, 255, cv2.THRESH_BINARY)
-        
+
         num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask1_binary, connectivity=8)
-        
+
         result_mask = mask1_binary.copy()
-        
+
         for label in range(1, num_labels):
             component_mask = (labels == label).astype(np.uint8) * 255
-        
+
             intersection = cv2.bitwise_and(component_mask, mask2_binary)
             if cv2.countNonZero(intersection) > 0:
                 result_mask[labels == label] = 0
 
         green_overlay = np.zeros_like(self.image, dtype=np.uint8)
         green_overlay[:] = (0, 255, 0)
-        
+
         masked_green = cv2.bitwise_and(green_overlay, green_overlay, mask=result_mask)
         alpha = 0.5
         result = cv2.addWeighted(masked_green, alpha, self.image, 1 - alpha, 0)
-        
+
         self.result = result
         self._save("free_spaces")
         return self
-
 
     def draw_histogram(self):
         hist = cv2.calcHist([self.result], [0], None, [256], [0, 256])
@@ -231,7 +231,7 @@ class ImageProcessor:
     def display_results(self):
         self.saver.display_images()
         return self
-        
+
     def display_final_result(self):
         plt.figure(figsize=(8, 8))
         plt.imshow(cv2.cvtColor(self.result, cv2.COLOR_BGR2RGB))
@@ -255,19 +255,20 @@ def process_image(image_path):
         .display_results() \
         .display_final_result()
 
+
 def get_images_to_process():
     image_files = []
 
     for filename in os.listdir("test_images"):
         if filename.lower().endswith(".jpg"):  # Check valid image extension
             image_files.append(os.path.join("test_images", filename))
-            
+
     return image_files
+
 
 if __name__ == "__main__":
     images = get_images_to_process()
-    for image in images[3:5]:
+    for image in images[10:15]:
         process_image(image)
         print(f"Przetworzono: {image}")
         print("=" * 50)
-        
