@@ -35,13 +35,13 @@ class ImageProcessor:
     
         # Replace the bottom part of the original image with the filtered result
         self.result[start_row:, :] = filtered_roi
-        self._save("bilateral_filter_bottom")
+        self._save("bilateral_filter_bottom_d={}_color={}_space={}_mask={}".format(d, sigma_color, sigma_space, mask_ratio))
         return self
 
     def apply_adaptive_thresholding(self, max_value=255, block_size=11, constant=2):
         self.result = cv2.adaptiveThreshold(self.result, max_value, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                             cv2.THRESH_BINARY_INV, block_size, constant)
-        self._save("adaptive_thresholded")
+        self._save("adaptive_thresholded_max={}_block={}_constant={}".format(max_value, block_size, constant))
         return self
 
     def apply_kmeans_to_bottom(self, mask_ratio=0.3, k=5):
@@ -62,18 +62,18 @@ class ImageProcessor:
 
         top_region = cv2.bitwise_and(self.result, self.result, mask=cv2.bitwise_not(mask))
         self.result = cv2.add(top_region, segmented_image)
-        self._save("kmeans_segmented")
+        self._save("kmeans_segmented_mask={}_k={}".format(mask_ratio, k))
         return self
 
     def apply_clahe(self, clip_limit=2.0, grid_size=(8, 8)):
         clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=grid_size)
         self.result = clahe.apply(self.result)
-        self._save("clahe_enhanced")
+        self._save("clahe_enhanced_clip={}_grid={}".format(clip_limit, grid_size))
         return self
 
     def apply_gaussian_blur(self, kernel_size=(3, 3)):
         self.result = cv2.GaussianBlur(self.result, kernel_size, 0)
-        self._save("blurred")
+        self._save("blurred_kernel={}".format(kernel_size))
         return self
     
     
@@ -86,19 +86,19 @@ class ImageProcessor:
         blurred_roi = cv2.GaussianBlur(roi, kernel_size, 0)
     
         self.result[start_row:, :] = blurred_roi
-        self._save("blurred_bottom")
+        self._save("blurred_bottom_kernel={}_mask={}".format(kernel_size, mask_ratio))
         return self
 
     def detect_edges(self, threshold1=50, threshold2=150):
         self.result = cv2.Canny(self.result, threshold1, threshold2)
-        self._save("edges_detected")
+        self._save("edges_detected_threshold1={}_threshold2={}".format(threshold1, threshold2))
         return self
 
     def refine_edges(self, kernel_size=(2, 2), iterations=1):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
         self.result = cv2.dilate(self.result, kernel, iterations=iterations)
         self.result = cv2.erode(self.result, kernel, iterations=iterations)
-        self._save("refined_edges")
+        self._save("refined_edges_kernel={}_iterations={}".format(kernel_size, iterations))
         return self
 
     def detect_lines_hough(self, min_line_length=80, max_line_gap=20, threshold=100):
@@ -113,7 +113,7 @@ class ImageProcessor:
                     if slope > 5:  # Vertical lines only
                         cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
         self.result = line_image
-        self._save("final_detected_lines")
+        self._save("final_detected_lines_hough_min={}_max={}_threshold={}".format(min_line_length, max_line_gap, threshold))
         return self
 
     def detect_lines_lsd(self):
@@ -138,25 +138,25 @@ class ImageProcessor:
     def apply_opened_morphology(self, kernel_size=(3, 3), iterations=1):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
         self.result = cv2.morphologyEx(self.result, cv2.MORPH_OPEN, kernel, iterations=iterations)
-        self._save("opened_morphology")
+        self._save("opened_morphology_kernel={}_iterations={}".format(kernel_size, iterations))
         return self
     
     def apply_closed_morphology(self, kernel_size=(3, 3), iterations=1):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
         self.result = cv2.morphologyEx(self.result, cv2.MORPH_CLOSE, kernel, iterations=iterations)
-        self._save("closed_morphology")
+        self._save("closed_morphology_kernel={}_iterations={}".format(kernel_size, iterations))
         return self
 
     def apply_erode_morphology(self, kernel_size=(3, 3), iterations=1):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
         self.result = cv2.erode(self.result, kernel, iterations=iterations)
-        self._save("eroded_morphology")
+        self._save("eroded_morphology_kernel={}_iterations={}".format(kernel_size, iterations))
         return self
     
     def apply_dilate_morphology(self, kernel_size=(3, 3), iterations=1):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernel_size)
         self.result = cv2.dilate(self.result, kernel, iterations=iterations)
-        self._save("dilated_morphology")
+        self._save("dilated_morphology_kernel={}_iterations={}".format(kernel_size, iterations))
         return self
     
     def detect_lines_ransac(self):
@@ -248,12 +248,7 @@ def process_image(image_path):
         .apply_gaussian_blur(kernel_size=(13,13)) \
         .apply_gaussian_blur_bottom() \
         .apply_bilateral_filter_bottom(mask_ratio=1) \
-        .apply_kmeans_to_bottom(k=2, mask_ratio=1) \
-        .apply_adaptive_thresholding() \
-        .apply_opened_morphology() \
-        .apply_closed_morphology() \
-        .apply_erode_morphology() \
-        .apply_dilate_morphology() \
+        .apply_kmeans_to_bottom(k=12, mask_ratio=1) \
         .detect_edges() \
         .refine_edges() \
         .mark_free_spaces() \
